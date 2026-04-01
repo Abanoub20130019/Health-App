@@ -1,0 +1,294 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Primary - Deep Forest */
+  --primary: #012d1d;
+  --on-primary: #ffffff;
+  --primary-container: #1b4332;
+  --on-primary-container: #c1ecd4;
+  --primary-fixed: #c1ecd4;
+  --primary-fixed-dim: #76dba6;
+  
+  /* Secondary */
+  --secondary: #4a6354;
+  --on-secondary: #ffffff;
+  --secondary-container: #cce9d5;
+  --on-secondary-container: #062113;
+  
+  /* Tertiary - Warm */
+  --tertiary: #3f1d00;
+  --on-tertiary: #ffffff;
+  --tertiary-container: #6f3b00;
+  --on-tertiary-container: #ffdcc2;
+  --tertiary-fixed: #ffdcc2;
+  --tertiary-fixed-dim: #ffb780;
+  
+  /* Surface - Warm Sands */
+  --surface: #f9faf2;
+  --on-surface: #1a1c18;
+  --on-surface-variant: #414844;
+  --surface-variant: #dbe5dd;
+  
+  /* Surface Containers */
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f3f4ec;
+  --surface-container: #edece5;
+  --surface-container-high: #e8e9e1;
+  --surface-container-highest: #e2e3db;
+  
+  /* Outline */
+  --outline: #717972;
+  --outline-variant: #c1c8c2;
+  
+  /* Status */
+  --error: #ba1a1a;
+  --success: #2e7d32;
+  --info: #0288d1;
+}
+
+@layer base {
+  * {
+    @apply box-border;
+  }
+  
+  html {
+    @apply antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: var(--surface);
+    color: var(--on-surface);
+  }
+  
+  body {
+    @apply m-0 min-h-screen;
+    background-color: var(--surface);
+    color: var(--on-surface);
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Manrope', system-ui, sans-serif;
+    @apply font-semibold tracking-tight;
+  }
+}
+
+@layer components {
+  /* Surface containers */
+  .surface-container-lowest {
+    background-color: var(--surface-container-lowest);
+  }
+  
+  .surface-container-low {
+    background-color: var(--surface-container-low);
+  }
+  
+  .surface-container {
+    background-color: var(--surface-container);
+  }
+  
+  .surface-container-high {
+    background-color: var(--surface-container-high);
+  }
+  
+  .surface-container-highest {
+    background-color: var(--surface-container-highest);
+  }
+  
+  /* Cards */
+  .card {
+    @apply rounded-xl p-5;
+    background-color: var(--surface-container-lowest);
+  }
+  
+  .card-elevated {
+    @apply rounded-xl p-5 shadow-ambient;
+    background-color: var(--surface-container-lowest);
+  }
+  
+  /* Buttons */
+  .btn-primary {
+    @apply px-6 py-3 rounded-xl font-medium transition-all duration-200;
+    background-color: var(--primary);
+    color: var(--on-primary);
+  }
+  
+  .btn-primary:hover {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-container) 100%);
+    transform: translateY(-1px);
+  }
+  
+  .btn-primary:active {
+    transform: translateY(0);
+  }
+  
+  .btn-secondary {
+    @apply px-6 py-3 rounded-xl font-medium transition-all duration-200;
+    background-color: var(--surface-container-highest);
+    color: var(--on-surface);
+  }
+  
+  .btn-secondary:hover {
+    background-color: var(--surface-container-high);
+  }
+  
+  /* Chips */
+  .chip {
+    @apply px-4 py-2 rounded-full text-sm font-medium transition-all duration-200;
+    background-color: var(--surface-container-high);
+    color: var(--on-surface-variant);
+  }
+  
+  .chip-active {
+    background-color: var(--primary-fixed);
+    color: var(--on-primary-container);
+  }
+  
+  /* Input fields */
+  .input-field {
+    @apply w-full px-4 py-3 rounded-xl transition-all duration-200 outline-none;
+    background-color: var(--surface-container-low);
+    color: var(--on-surface);
+  }
+  
+  .input-field:focus {
+    background-color: var(--surface-container-lowest);
+    outline: 2px solid var(--primary-fixed-dim);
+    outline-offset: -2px;
+  }
+  
+  /* Ghost border (when needed for accessibility) */
+  .ghost-border {
+    outline: 1px solid var(--outline-variant);
+    outline-offset: -1px;
+    outline-opacity: 0.15;
+  }
+  
+  /* Glass effect */
+  .glass {
+    background-color: rgba(249, 250, 242, 0.8);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+  
+  /* Progress ring */
+  .progress-ring {
+    @apply relative;
+  }
+  
+  .progress-ring-circle {
+    transition: stroke-dashoffset 0.5s ease;
+  }
+  
+  /* Gradient text */
+  .gradient-text {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-container) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  /* Progress halo - warm gradient */
+  .progress-halo {
+    background: linear-gradient(135deg, var(--tertiary) 0%, var(--tertiary-fixed-dim) 100%);
+  }
+
+  /* Animated Icons Wrapper */
+  .al-icon-wrapper {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .al-icon-wrapper svg {
+    --animated-lucide-primary: var(--primary);
+    --animated-lucide-secondary: var(--primary-container);
+  }
+}
+
+@layer utilities {
+  /* No divider rule - use spacing instead */
+  .divider-replace {
+    @apply my-6;
+  }
+  
+  /* Safe area for mobile */
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+  }
+  
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 20px);
+  }
+  
+  /* Hide scrollbar */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Touch action optimization */
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+}
+
+/* Custom animations */
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.2s ease-out;
+}
+
+/* Progress bar styles */
+.progress-bar-bg {
+  background-color: var(--surface-container-high);
+}
+
+.progress-bar-fill {
+  background: linear-gradient(90deg, var(--primary) 0%, var(--primary-container) 100%);
+}
+
+.progress-bar-fill-warm {
+  background: linear-gradient(90deg, var(--tertiary) 0%, var(--tertiary-fixed-dim) 100%);
+}
