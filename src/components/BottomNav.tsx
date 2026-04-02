@@ -25,7 +25,7 @@ export default function BottomNav() {
         WebkitBackdropFilter: 'blur(24px)',
       }}
     >
-      <div className="flex items-center justify-around py-2">
+      <div className="flex items-center justify-around py-2 max-w-md mx-auto w-full px-4">
         {navItems.map(({ path, icon: Icon, label }) => (
           <NavLink
             key={path}

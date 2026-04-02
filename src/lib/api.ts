@@ -58,22 +58,22 @@ export const authAPI = {
 
 // ==================== USER ====================
 export const userAPI = {
-  getOrCreate: async (email: string, name: string): Promise<User> => {
-    // Check if user exists
+  getOrCreate: async (id: string, email: string, name: string): Promise<User> => {
+    // Check if user exists by ID
     const { data: existing, error: fetchError } = await supabase
       .from('users')
       .select('*')
-      .eq('email', email)
-      .single()
+      .eq('id', id)
+      .maybeSingle()
     
-    if (fetchError && fetchError.code !== 'PGRST116') throw fetchError
+    if (fetchError) throw fetchError
     
     if (existing) return existing as User
     
-    // Create new user
+    // Create new user with the auth ID
     const { data, error } = await supabase
       .from('users')
-      .insert([{ email, name }])
+      .insert([{ id, email, name }])
       .select()
       .single()
     
@@ -114,10 +114,9 @@ export const fastingAPI = {
       .eq('user_id', userId)
       .is('end_time', null)
       .order('start_time', { ascending: false })
-      .limit(1)
-      .single()
+      .maybeSingle()
     
-    if (error && error.code !== 'PGRST116') throw error
+    if (error) throw error
     return data as FastingSession | null
   },
   

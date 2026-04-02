@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo, memo } from 'react'
 import { Play, Clock, Flame, TrendingUp, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { fastingAPI } from '../lib/api'
 import { formatTime } from '../utils/date'
@@ -14,7 +14,108 @@ const FASTING_WINDOWS = [
   { type: '18:6', label: '18:6 Advanced', hours: 18, description: '18 hours fasting, 6 hours eating' },
   { type: '20:4', label: '20:4 Warrior', hours: 20, description: '20 hours fasting, 4 hours eating' },
   { type: 'OMAD', label: 'OMAD', hours: 23, description: 'One meal a day' },
-]
+] as const
+
+// Memoized window selection button
+const WindowButton = memo(({
+  window,
+  isSelected,
+  onClick,
+  disabled,
+}: {
+  window: typeof FASTING_WINDOWS[number]
+  isSelected: boolean
+  onClick: () => void
+  disabled: boolean
+}) => (
+  <button
+    key={window.type}
+    onClick={onClick}
+    disabled={disabled}
+    className="w-full p-4 rounded-xl text-left transition-all disabled:opacity-50"
+    style={{
+      backgroundColor: isSelected 
+        ? 'var(--primary-fixed)' 
+        : 'var(--surface-container-lowest)',
+      border: isSelected 
+        ? '2px solid var(--primary)' 
+        : '2px solid transparent',
+    }}
+  >
+    <div className="flex items-center justify-between">
+      <div>
+        <p 
+          className="font-semibold text-body-lg"
+          style={{ color: 'var(--on-surface)' }}
+        >
+          {window.label}
+        </p>
+        <p className="text-body-sm" style={{ color: 'var(--on-surface-variant)' }}>
+          {window.description}
+        </p>
+      </div>
+      {isSelected && (
+        <CheckCircle2 size={24} style={{ color: 'var(--primary)' }} />
+      )}
+    </div>
+  </button>
+))
+
+WindowButton.displayName = 'WindowButton'
+
+// Memoized history item
+const HistoryItem = memo(({
+  session,
+}: {
+  session: FastingSession
+}) => (
+  <div
+    className="card flex items-center justify-between"
+    style={{ backgroundColor: 'var(--surface-container-lowest)' }}
+  >
+    <div className="flex items-center gap-4">
+      <div 
+        className="w-12 h-12 rounded-xl flex items-center justify-center"
+        style={{ 
+          backgroundColor: session.broken_early 
+            ? 'var(--error-container)' 
+            : 'var(--primary-fixed)'
+        }}
+      >
+        <Clock 
+          size={20} 
+          style={{ 
+            color: session.broken_early ? 'var(--error)' : 'var(--primary)' 
+          }} 
+        />
+      </div>
+      <div>
+        <p 
+          className="font-medium text-body-lg"
+          style={{ color: 'var(--on-surface)' }}
+        >
+          {session.window_type}
+        </p>
+        <p className="text-label-sm" style={{ color: 'var(--on-surface-variant)' }}>
+          {formatTime(session.start_time)}
+        </p>
+      </div>
+    </div>
+    <div className="text-right">
+      <p 
+        className="font-display font-semibold"
+        style={{ color: 'var(--on-surface)' }}
+      >
+        {session.actual_duration_hours?.toFixed(1)}h
+      </p>
+      <p className="text-label-sm" style={{ color: 'var(--on-surface-variant)' }}>
+        / {session.target_duration_hours}h
+      </p>
+    </div>
+  </div>
+))
+
+HistoryItem.displayName = 'HistoryItem'
 
 export default function Fasting({ userId }: FastingProps) {
   const [activeSession, setActiveSession] = useState<FastingSession | null>(null)
@@ -49,7 +150,7 @@ export default function Fasting({ userId }: FastingProps) {
     loadData()
   }, [loadData])
 
-  // Update elapsed time timer
+  // Update elapsed time timer - optimized with useCallback
   useEffect(() => {
     if (!activeSession || activeSession.end_time) return
 
@@ -61,7 +162,7 @@ export default function Fasting({ userId }: FastingProps) {
     return () => clearInterval(interval)
   }, [activeSession])
 
-  const handleStart = async () => {
+  const handleStart = useCallback(async () => {
     const window = FASTING_WINDOWS.find(w => w.type === selectedWindow)
     if (!window) return
 
@@ -69,25 +170,22 @@ export default function Fasting({ userId }: FastingProps) {
     setError(null)
     
     try {
-      console.log('Starting fast with:', { userId, windowType: window.type, targetHours: window.hours })
       const session = await fastingAPI.start({
         userId,
         windowType: window.type,
         targetHours: window.hours,
       })
-      console.log('Fast started successfully:', session)
       setActiveSession(session)
       setElapsedTime(0)
     } catch (err: unknown) {
-      console.error('Failed to start fast:', err)
       const errorMessage = err instanceof Error ? err.message : 'Failed to start fast'
       setError(errorMessage)
     } finally {
       setStarting(false)
     }
-  }
+  }, [userId, selectedWindow])
 
-  const handleEnd = async () => {
+  const handleEnd = useCallback(async () => {
     if (!activeSession) return
 
     try {
@@ -95,26 +193,27 @@ export default function Fasting({ userId }: FastingProps) {
       await fastingAPI.end(activeSession.id, {})
       loadData()
     } catch (err: unknown) {
-      console.error('Failed to end fast:', err)
       const errorMessage = err instanceof Error ? err.message : 'Failed to end fast'
       setError(errorMessage)
     }
-  }
+  }, [activeSession, loadData])
 
-  const getProgress = () => {
+  // Memoized progress calculation
+  const progress = useMemo(() => {
     if (!activeSession) return 0
     const target = activeSession.target_duration_hours
     const current = activeSession.end_time 
       ? (activeSession.actual_duration_hours || 0)
       : elapsedTime
     return Math.min((current / target) * 100, 100)
-  }
+  }, [activeSession, elapsedTime])
 
-  const getElapsedDisplay = () => {
+  // Memoized elapsed display
+  const elapsedDisplay = useMemo(() => {
     const hours = Math.floor(elapsedTime)
     const minutes = Math.floor((elapsedTime - hours) * 60)
     return `${hours}h ${minutes}m`
-  }
+  }, [elapsedTime])
 
   if (loading) {
     return (
@@ -161,112 +260,19 @@ export default function Fasting({ userId }: FastingProps) {
       >
         <div className="relative z-10 text-center py-8">
           {activeSession && !activeSession.end_time ? (
-            <>
-              <p className="text-label-lg mb-4" style={{ color: 'rgba(255,255,255,0.8)' }}>
-                Fasting in Progress • {activeSession.window_type}
-              </p>
-              <div className="flex justify-center mb-6">
-                <CircularProgress 
-                  progress={getProgress()} 
-                  size={160} 
-                  strokeWidth={12}
-                  color="white"
-                  bgColor="rgba(255,255,255,0.2)"
-                />
-              </div>
-              <p 
-                className="font-display font-bold text-display-md mb-2"
-                style={{ color: 'white' }}
-              >
-                {getElapsedDisplay()}
-              </p>
-              <p className="text-body-md mb-6" style={{ color: 'rgba(255,255,255,0.8)' }}>
-                Target: {activeSession.target_duration_hours} hours
-              </p>
-              <button
-                onClick={handleEnd}
-                className="px-8 py-3 rounded-xl font-medium transition-all"
-                style={{ 
-                  backgroundColor: 'white',
-                  color: 'var(--primary)'
-                }}
-              >
-                End Fast
-              </button>
-            </>
+            <ActiveFastView
+              activeSession={activeSession}
+              progress={progress}
+              elapsedDisplay={elapsedDisplay}
+              onEnd={handleEnd}
+            />
           ) : (
-            <>
-              <div 
-                className="w-20 h-20 rounded-2xl mx-auto mb-4 flex items-center justify-center"
-                style={{ backgroundColor: 'var(--primary-fixed)' }}
-              >
-                <Clock size={40} style={{ color: 'var(--primary)' }} />
-              </div>
-              <p 
-                className="font-display font-bold text-headline-md mb-2"
-                style={{ color: 'var(--on-surface)' }}
-              >
-                Ready to Fast?
-              </p>
-              <p className="text-body-md mb-6" style={{ color: 'var(--on-surface-variant)' }}>
-                Choose your fasting window
-              </p>
-
-              {/* Window Selection */}
-              <div className="space-y-2 mb-6">
-                {FASTING_WINDOWS.map((window) => (
-                  <button
-                    key={window.type}
-                    onClick={() => setSelectedWindow(window.type)}
-                    disabled={starting}
-                    className="w-full p-4 rounded-xl text-left transition-all disabled:opacity-50"
-                    style={{
-                      backgroundColor: selectedWindow === window.type 
-                        ? 'var(--primary-fixed)' 
-                        : 'var(--surface-container-lowest)',
-                      border: selectedWindow === window.type 
-                        ? '2px solid var(--primary)' 
-                        : '2px solid transparent',
-                    }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p 
-                          className="font-semibold text-body-lg"
-                          style={{ color: 'var(--on-surface)' }}
-                        >
-                          {window.label}
-                        </p>
-                        <p className="text-body-sm" style={{ color: 'var(--on-surface-variant)' }}>
-                          {window.description}
-                        </p>
-                      </div>
-                      {selectedWindow === window.type && (
-                        <CheckCircle2 size={24} style={{ color: 'var(--primary)' }} />
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              <button
-                onClick={handleStart}
-                disabled={starting}
-                className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {starting ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Starting...
-                  </>
-                ) : (
-                  <>
-                    <Play size={20} />
-                    Start Fasting
-                  </>
-                )}
-              </button>
-            </>
+            <StartFastView
+              selectedWindow={selectedWindow}
+              setSelectedWindow={setSelectedWindow}
+              onStart={handleStart}
+              starting={starting}
+            />
           )}
         </div>
       </div>
@@ -331,51 +337,7 @@ export default function Fasting({ userId }: FastingProps) {
             </div>
           ) : (
             history.map((session) => (
-              <div
-                key={session.id}
-                className="card flex items-center justify-between"
-                style={{ backgroundColor: 'var(--surface-container-lowest)' }}
-              >
-                <div className="flex items-center gap-4">
-                  <div 
-                    className="w-12 h-12 rounded-xl flex items-center justify-center"
-                    style={{ 
-                      backgroundColor: session.broken_early 
-                        ? 'var(--error-container)' 
-                        : 'var(--primary-fixed)'
-                    }}
-                  >
-                    <Clock 
-                      size={20} 
-                      style={{ 
-                        color: session.broken_early ? 'var(--error)' : 'var(--primary)' 
-                      }} 
-                    />
-                  </div>
-                  <div>
-                    <p 
-                      className="font-medium text-body-lg"
-                      style={{ color: 'var(--on-surface)' }}
-                    >
-                      {session.window_type}
-                    </p>
-                    <p className="text-label-sm" style={{ color: 'var(--on-surface-variant)' }}>
-                      {formatTime(session.start_time)}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p 
-                    className="font-display font-semibold"
-                    style={{ color: 'var(--on-surface)' }}
-                  >
-                    {session.actual_duration_hours?.toFixed(1)}h
-                  </p>
-                  <p className="text-label-sm" style={{ color: 'var(--on-surface-variant)' }}>
-                    / {session.target_duration_hours}h
-                  </p>
-                </div>
-              </div>
+              <HistoryItem key={session.id} session={session} />
             ))
           )}
         </div>
@@ -383,3 +345,120 @@ export default function Fasting({ userId }: FastingProps) {
     </div>
   )
 }
+
+// Extracted active fast view component
+interface ActiveFastViewProps {
+  activeSession: FastingSession
+  progress: number
+  elapsedDisplay: string
+  onEnd: () => void
+}
+
+const ActiveFastView = memo(({
+  activeSession,
+  progress,
+  elapsedDisplay,
+  onEnd,
+}: ActiveFastViewProps) => (
+  <>
+    <p className="text-label-lg mb-4" style={{ color: 'rgba(255,255,255,0.8)' }}>
+      Fasting in Progress • {activeSession.window_type}
+    </p>
+    <div className="flex justify-center mb-6">
+      <CircularProgress 
+        progress={progress} 
+        size={160} 
+        strokeWidth={12}
+        color="white"
+        bgColor="rgba(255,255,255,0.2)"
+      />
+    </div>
+    <p 
+      className="font-display font-bold text-display-md mb-2"
+      style={{ color: 'white' }}
+    >
+      {elapsedDisplay}
+    </p>
+    <p className="text-body-md mb-6" style={{ color: 'rgba(255,255,255,0.8)' }}>
+      Target: {activeSession.target_duration_hours} hours
+    </p>
+    <button
+      onClick={onEnd}
+      className="px-8 py-3 rounded-xl font-medium transition-all"
+      style={{ 
+        backgroundColor: 'white',
+        color: 'var(--primary)'
+      }}
+    >
+      End Fast
+    </button>
+  </>
+))
+
+ActiveFastView.displayName = 'ActiveFastView'
+
+// Extracted start fast view component
+interface StartFastViewProps {
+  selectedWindow: string
+  setSelectedWindow: (window: string) => void
+  onStart: () => void
+  starting: boolean
+}
+
+const StartFastView = memo(({
+  selectedWindow,
+  setSelectedWindow,
+  onStart,
+  starting,
+}: StartFastViewProps) => (
+  <>
+    <div 
+      className="w-20 h-20 rounded-2xl mx-auto mb-4 flex items-center justify-center"
+      style={{ backgroundColor: 'var(--primary-fixed)' }}
+    >
+      <Clock size={40} style={{ color: 'var(--primary)' }} />
+    </div>
+    <p 
+      className="font-display font-bold text-headline-md mb-2"
+      style={{ color: 'var(--on-surface)' }}
+    >
+      Ready to Fast?
+    </p>
+    <p className="text-body-md mb-6" style={{ color: 'var(--on-surface-variant)' }}>
+      Choose your fasting window
+    </p>
+
+    {/* Window Selection */}
+    <div className="space-y-2 mb-6">
+      {FASTING_WINDOWS.map((window) => (
+        <WindowButton
+          key={window.type}
+          window={window}
+          isSelected={selectedWindow === window.type}
+          onClick={() => setSelectedWindow(window.type)}
+          disabled={starting}
+        />
+      ))}
+    </div>
+
+    <button
+      onClick={onStart}
+      disabled={starting}
+      className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      {starting ? (
+        <>
+          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          Starting...
+        </>
+      ) : (
+        <>
+          <Play size={20} />
+          Start Fasting
+        </>
+      )}
+    </button>
+  </>
+))
+
+StartFastView.displayName = 'StartFastView'

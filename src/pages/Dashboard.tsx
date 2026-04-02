@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo, memo } from 'react'
 import { 
   Timer, 
   Ban, 
@@ -22,6 +22,7 @@ interface DashboardProps {
   userId: string
 }
 
+// Static data outside component
 const habitCards = [
   { 
     id: 'fasting', 
@@ -87,12 +88,90 @@ const habitCards = [
     bgColor: '#ffcdd2',
     path: '/progress'
   },
-]
+] as const
+
+// Memoized habit card component to prevent unnecessary re-renders
+const HabitCard = memo(({ 
+  label, 
+  icon: Icon, 
+  color, 
+  bgColor, 
+  path 
+}: Omit<typeof habitCards[number], 'id'>) => (
+  <Link
+    to={path}
+    className="card p-4 transition-transform active:scale-95"
+    style={{ backgroundColor: 'var(--surface-container-lowest)' }}
+  >
+    <div className="flex items-start justify-between mb-3">
+      <div 
+        className="w-12 h-12 rounded-xl flex items-center justify-center"
+        style={{ backgroundColor: bgColor }}
+      >
+        <Icon size={24} style={{ color }} />
+      </div>
+      <ChevronRight size={16} style={{ color: 'var(--outline)' }} />
+    </div>
+    <p 
+      className="font-medium text-body-md"
+      style={{ color: 'var(--on-surface)' }}
+    >
+      {label}
+    </p>
+  </Link>
+))
+
+HabitCard.displayName = 'HabitCard'
+
+// Memoized stat card component
+const StatCard = memo(({ 
+  icon: Icon, 
+  iconColor, 
+  bgColor, 
+  label, 
+  value, 
+  subLabel 
+}: { 
+  icon: typeof Footprints
+  iconColor: string
+  bgColor: string
+  label: string
+  value: string
+  subLabel: string
+}) => (
+  <div 
+    className="card"
+    style={{ backgroundColor: 'var(--surface-container-low)' }}
+  >
+    <div className="flex items-center gap-3 mb-2">
+      <div 
+        className="w-10 h-10 rounded-xl flex items-center justify-center"
+        style={{ backgroundColor: bgColor }}
+      >
+        <Icon size={20} style={{ color: iconColor }} />
+      </div>
+      <span className="text-label-sm" style={{ color: 'var(--on-surface-variant)' }}>
+        {label}
+      </span>
+    </div>
+    <p 
+      className="font-display font-bold text-headline-md"
+      style={{ color: 'var(--on-surface)' }}
+    >
+      {value}
+    </p>
+    <p className="text-label-sm" style={{ color: 'var(--on-surface-variant)' }}>
+      {subLabel}
+    </p>
+  </div>
+))
+
+StatCard.displayName = 'StatCard'
 
 export default function Dashboard({ userId }: DashboardProps) {
   const [summary, setSummary] = useState<DailySummary | null>(null)
   const [loading, setLoading] = useState(true)
-  const today = getToday()
+  const today = useMemo(() => getToday(), [])
 
   useEffect(() => {
     const loadSummary = async () => {
@@ -124,6 +203,25 @@ export default function Dashboard({ userId }: DashboardProps) {
     loadSummary()
   }, [userId, today])
 
+  // Memoized computed values
+  const formattedSteps = useMemo(() => 
+    (summary?.steps || 0).toLocaleString(),
+    [summary?.steps]
+  )
+
+  const formattedHydration = useMemo(() => 
+    `${summary?.hydrationPercent || 0}%`,
+    [summary?.hydrationPercent]
+  )
+
+  const overallScore = useMemo(() => 
+    summary?.overallScore || 0,
+    [summary?.overallScore]
+  )
+
+  // Memoized displayed date
+  const displayDate = useMemo(() => formatDisplayDate(today), [today])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -140,7 +238,7 @@ export default function Dashboard({ userId }: DashboardProps) {
       {/* Daily Greeting */}
       <div>
         <p className="text-body-md" style={{ color: 'var(--on-surface-variant)' }}>
-          {formatDisplayDate(today)}
+          {displayDate}
         </p>
         <h1 
           className="font-display font-bold text-display-sm mt-1"
@@ -159,7 +257,7 @@ export default function Dashboard({ userId }: DashboardProps) {
       >
         <div className="relative z-10 flex items-center gap-6">
           <CircularProgress 
-            progress={summary?.overallScore || 0} 
+            progress={overallScore} 
             size={100} 
             strokeWidth={8}
             color="white"
@@ -173,7 +271,7 @@ export default function Dashboard({ userId }: DashboardProps) {
               className="font-display font-bold text-display-sm"
               style={{ color: 'white' }}
             >
-              {summary?.overallScore || 0}%
+              {overallScore}%
             </p>
             <p className="text-body-sm mt-1" style={{ color: 'rgba(255,255,255,0.8)' }}>
               Keep up the great work!
@@ -189,57 +287,22 @@ export default function Dashboard({ userId }: DashboardProps) {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 gap-4">
-        <div 
-          className="card"
-          style={{ backgroundColor: 'var(--surface-container-low)' }}
-        >
-          <div className="flex items-center gap-3 mb-2">
-            <div 
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ backgroundColor: 'var(--primary-fixed)' }}
-            >
-              <Footprints size={20} style={{ color: 'var(--primary)' }} />
-            </div>
-            <span className="text-label-sm" style={{ color: 'var(--on-surface-variant)' }}>
-              Steps
-            </span>
-          </div>
-          <p 
-            className="font-display font-bold text-headline-md"
-            style={{ color: 'var(--on-surface)' }}
-          >
-            {(summary?.steps || 0).toLocaleString()}
-          </p>
-          <p className="text-label-sm" style={{ color: 'var(--on-surface-variant)' }}>
-            Goal: 10,000
-          </p>
-        </div>
-
-        <div 
-          className="card"
-          style={{ backgroundColor: 'var(--surface-container-low)' }}
-        >
-          <div className="flex items-center gap-3 mb-2">
-            <div 
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ backgroundColor: 'var(--tertiary-fixed)' }}
-            >
-              <Droplets size={20} style={{ color: 'var(--tertiary)' }} />
-            </div>
-            <span className="text-label-sm" style={{ color: 'var(--on-surface-variant)' }}>
-              Hydration
-            </span>
-          </div>
-          <p 
-            className="font-display font-bold text-headline-md"
-            style={{ color: 'var(--on-surface)' }}
-          >
-            {summary?.hydrationPercent || 0}%
-          </p>
-          <p className="text-label-sm" style={{ color: 'var(--on-surface-variant)' }}>
-            Goal: 2.5L
-          </p>
-        </div>
+        <StatCard 
+          icon={Footprints}
+          iconColor="var(--primary)"
+          bgColor="var(--primary-fixed)"
+          label="Steps"
+          value={formattedSteps}
+          subLabel="Goal: 10,000"
+        />
+        <StatCard 
+          icon={Droplets}
+          iconColor="var(--tertiary)"
+          bgColor="var(--tertiary-fixed)"
+          label="Hydration"
+          value={formattedHydration}
+          subLabel="Goal: 2.5L"
+        />
       </div>
 
       {/* Habit Grid */}
@@ -251,29 +314,8 @@ export default function Dashboard({ userId }: DashboardProps) {
           Track Your Habits
         </h2>
         <div className="grid grid-cols-2 gap-3">
-          {habitCards.map(({ id, label, icon: Icon, color, bgColor, path }) => (
-            <Link
-              key={id}
-              to={path}
-              className="card p-4 transition-transform active:scale-95"
-              style={{ backgroundColor: 'var(--surface-container-lowest)' }}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div 
-                  className="w-12 h-12 rounded-xl flex items-center justify-center"
-                  style={{ backgroundColor: bgColor }}
-                >
-                  <Icon size={24} style={{ color }} />
-                </div>
-                <ChevronRight size={16} style={{ color: 'var(--outline)' }} />
-              </div>
-              <p 
-                className="font-medium text-body-md"
-                style={{ color: 'var(--on-surface)' }}
-              >
-                {label}
-              </p>
-            </Link>
+          {habitCards.map((card) => (
+            <HabitCard key={card.id} {...card} />
           ))}
         </div>
       </div>

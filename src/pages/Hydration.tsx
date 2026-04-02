@@ -1,13 +1,13 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo, memo } from 'react'
 import { 
   Droplets, 
   Plus, 
-  Coffee, 
   Sun,
   Minus,
   GlassWater,
   Leaf,
-  Zap
+  Zap,
+  Coffee
 } from 'lucide-react'
 import { hydrationAPI } from '../lib/api'
 import { getToday, formatDisplayDate, formatTime } from '../utils/date'
@@ -24,7 +24,61 @@ const QUICK_ADD_AMOUNTS = [
   { amount: 250, label: 'Glass', icon: GlassWater },
   { amount: 500, label: 'Bottle', icon: Droplets },
   { amount: 750, label: 'Large', icon: Droplets },
-]
+] as const
+
+// Memoized quick add button
+const QuickAddButton = memo(({
+  amount,
+  icon: Icon,
+  onClick,
+}: {
+  amount: number
+  icon: typeof GlassWater
+  onClick: () => void
+}) => (
+  <button
+    onClick={onClick}
+    className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all active:scale-95"
+    style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
+  >
+    <Icon size={24} color="white" />
+    <span className="text-label-sm font-medium" style={{ color: 'white' }}>
+      +{amount}ml
+    </span>
+  </button>
+))
+
+QuickAddButton.displayName = 'QuickAddButton'
+
+// Memoized log entry item
+const LogEntry = memo(({
+  log,
+}: {
+  log: { time: string; amount_ml: number; type: string }
+}) => (
+  <div
+    className="card flex items-center justify-between"
+    style={{ backgroundColor: 'var(--surface-container-lowest)' }}
+  >
+    <div className="flex items-center gap-3">
+      <Droplets size={20} style={{ color: 'var(--primary)' }} />
+      <span className="text-body-md" style={{ color: 'var(--on-surface)' }}>
+        {log.amount_ml}ml
+      </span>
+      <span 
+        className="text-label-sm px-2 py-1 rounded-full capitalize"
+        style={{ backgroundColor: 'var(--surface-container-high)' }}
+      >
+        {log.type}
+      </span>
+    </div>
+    <span className="text-label-sm" style={{ color: 'var(--on-surface-variant)' }}>
+      {formatTime(log.time)}
+    </span>
+  </div>
+))
+
+LogEntry.displayName = 'LogEntry'
 
 export default function Hydration({ userId }: HydrationProps) {
   const [entry, setEntry] = useState<HydrationEntry | null>(null)
@@ -58,7 +112,7 @@ export default function Hydration({ userId }: HydrationProps) {
     loadData()
   }, [loadData])
 
-  const addWater = async (amount: number, type: 'water' | 'tea' | 'coffee' | 'electrolyte' = 'water') => {
+  const addWater = useCallback(async (amount: number, type: 'water' | 'tea' | 'coffee' | 'electrolyte' = 'water') => {
     try {
       await hydrationAPI.addEntry({
         userId,
@@ -71,9 +125,9 @@ export default function Hydration({ userId }: HydrationProps) {
     } catch (error) {
       console.error('Failed to add water:', error)
     }
-  }
+  }, [userId, loadData])
 
-  const toggleMorningWater = async () => {
+  const toggleMorningWater = useCallback(async () => {
     try {
       await hydrationAPI.update({
         userId,
@@ -84,9 +138,9 @@ export default function Hydration({ userId }: HydrationProps) {
     } catch (error) {
       console.error('Failed to update morning water:', error)
     }
-  }
+  }, [userId, entry?.morning_water, loadData])
 
-  const toggleCaffeine = async () => {
+  const toggleCaffeine = useCallback(async () => {
     try {
       await hydrationAPI.update({
         userId,
@@ -97,9 +151,9 @@ export default function Hydration({ userId }: HydrationProps) {
     } catch (error) {
       console.error('Failed to update caffeine:', error)
     }
-  }
+  }, [userId, entry?.caffeine_after_2pm, loadData])
 
-  const adjustHerbalTeas = async (delta: number) => {
+  const adjustHerbalTeas = useCallback(async (delta: number) => {
     const newCount = Math.max(0, (entry?.herbal_teas || 0) + delta)
     try {
       await hydrationAPI.update({
@@ -111,9 +165,9 @@ export default function Hydration({ userId }: HydrationProps) {
     } catch (error) {
       console.error('Failed to update herbal teas:', error)
     }
-  }
+  }, [userId, entry?.herbal_teas, loadData])
 
-  const adjustElectrolytes = async (delta: number) => {
+  const adjustElectrolytes = useCallback(async (delta: number) => {
     const newCount = Math.max(0, (entry?.electrolytes || 0) + delta)
     try {
       await hydrationAPI.update({
@@ -125,9 +179,31 @@ export default function Hydration({ userId }: HydrationProps) {
     } catch (error) {
       console.error('Failed to update electrolytes:', error)
     }
-  }
+  }, [userId, entry?.electrolytes, loadData])
 
-  const progress = Math.min(((entry?.total_ml || 0) / WATER_GOAL_ML) * 100, 100)
+  const handleCustomAdd = useCallback(() => {
+    if (customAmount) {
+      addWater(parseInt(customAmount))
+      setCustomAmount('')
+    }
+  }, [customAmount, addWater])
+
+  // Memoized progress calculation
+  const progress = useMemo(() => 
+    Math.min(((entry?.total_ml || 0) / WATER_GOAL_ML) * 100, 100),
+    [entry?.total_ml]
+  )
+
+  // Memoized display values
+  const displayDate = useMemo(() => formatDisplayDate(getToday()), [])
+  const totalMl = entry?.total_ml || 0
+  const progressPercent = Math.round(progress)
+
+  // Memoized reversed entries with stable keys
+  const reversedEntries = useMemo(() => {
+    if (!entry?.entries) return []
+    return [...entry.entries].reverse()
+  }, [entry?.entries])
 
   if (loading) {
     return (
@@ -149,7 +225,7 @@ export default function Hydration({ userId }: HydrationProps) {
           Hydration
         </h1>
         <p className="text-body-md mt-1" style={{ color: 'var(--on-surface-variant)' }}>
-          {formatDisplayDate(getToday())}
+          {displayDate}
         </p>
       </div>
 
@@ -174,26 +250,21 @@ export default function Hydration({ userId }: HydrationProps) {
           className="font-display font-bold text-display-md mb-2"
           style={{ color: 'white' }}
         >
-          {entry?.total_ml || 0} ml
+          {totalMl} ml
         </p>
         <p className="text-body-md mb-6" style={{ color: 'rgba(255,255,255,0.8)' }}>
-          Goal: {WATER_GOAL_ML} ml ({Math.round(progress)}%)
+          Goal: {WATER_GOAL_ML} ml ({progressPercent}%)
         </p>
 
         {/* Quick Add Buttons */}
         <div className="flex justify-center gap-3 px-4">
-          {QUICK_ADD_AMOUNTS.map(({ amount, label: _label, icon: Icon }) => (
-            <button
+          {QUICK_ADD_AMOUNTS.map(({ amount, icon }) => (
+            <QuickAddButton
               key={amount}
+              amount={amount}
+              icon={icon}
               onClick={() => addWater(amount)}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all active:scale-95"
-              style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
-            >
-              <Icon size={24} color="white" />
-              <span className="text-label-sm font-medium" style={{ color: 'white' }}>
-                +{amount}ml
-              </span>
-            </button>
+            />
           ))}
         </div>
       </div>
@@ -211,12 +282,7 @@ export default function Hydration({ userId }: HydrationProps) {
           className="input-field flex-1"
         />
         <button
-          onClick={() => {
-            if (customAmount) {
-              addWater(parseInt(customAmount))
-              setCustomAmount('')
-            }
-          }}
+          onClick={handleCustomAdd}
           className="px-4 py-3 rounded-xl font-medium"
           style={{ backgroundColor: 'var(--primary)', color: 'white' }}
         >
@@ -311,99 +377,33 @@ export default function Hydration({ userId }: HydrationProps) {
           </button>
 
           {/* Herbal Teas */}
-          <div 
-            className="card"
-            style={{ backgroundColor: 'var(--surface-container-lowest)' }}
-          >
-            <div className="flex items-center gap-4">
-              <div 
-                className="w-14 h-14 rounded-xl flex items-center justify-center"
-                style={{ backgroundColor: '#e8f5e9' }}
-              >
-                <Leaf size={28} style={{ color: '#2e7d32' }} />
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-body-lg" style={{ color: 'var(--on-surface)' }}>
-                  Herbal Teas
-                </p>
-                <p className="text-label-sm" style={{ color: 'var(--on-surface-variant)' }}>
-                  Cups today
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => adjustHerbalTeas(-1)}
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: 'var(--surface-container-high)' }}
-                >
-                  <Minus size={18} />
-                </button>
-                <span 
-                  className="w-8 text-center font-semibold"
-                  style={{ color: 'var(--on-surface)' }}
-                >
-                  {entry?.herbal_teas || 0}
-                </span>
-                <button
-                  onClick={() => adjustHerbalTeas(1)}
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: '#e8f5e9' }}
-                >
-                  <Plus size={18} style={{ color: '#2e7d32' }} />
-                </button>
-              </div>
-            </div>
-          </div>
+          <CounterCard
+            icon={Leaf}
+            iconColor="#2e7d32"
+            bgColor="#e8f5e9"
+            title="Herbal Teas"
+            subtitle="Cups today"
+            value={entry?.herbal_teas || 0}
+            onDecrement={() => adjustHerbalTeas(-1)}
+            onIncrement={() => adjustHerbalTeas(1)}
+          />
 
           {/* Electrolytes */}
-          <div 
-            className="card"
-            style={{ backgroundColor: 'var(--surface-container-lowest)' }}
-          >
-            <div className="flex items-center gap-4">
-              <div 
-                className="w-14 h-14 rounded-xl flex items-center justify-center"
-                style={{ backgroundColor: '#fff8e1' }}
-              >
-                <Zap size={28} style={{ color: '#f9a825' }} />
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-body-lg" style={{ color: 'var(--on-surface)' }}>
-                  Electrolytes
-                </p>
-                <p className="text-label-sm" style={{ color: 'var(--on-surface-variant)' }}>
-                  Servings today
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => adjustElectrolytes(-1)}
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: 'var(--surface-container-high)' }}
-                >
-                  <Minus size={18} />
-                </button>
-                <span 
-                  className="w-8 text-center font-semibold"
-                  style={{ color: 'var(--on-surface)' }}
-                >
-                  {entry?.electrolytes || 0}
-                </span>
-                <button
-                  onClick={() => adjustElectrolytes(1)}
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: '#fff8e1' }}
-                >
-                  <Plus size={18} style={{ color: '#f9a825' }} />
-                </button>
-              </div>
-            </div>
-          </div>
+          <CounterCard
+            icon={Zap}
+            iconColor="#f9a825"
+            bgColor="#fff8e1"
+            title="Electrolytes"
+            subtitle="Servings today"
+            value={entry?.electrolytes || 0}
+            onDecrement={() => adjustElectrolytes(-1)}
+            onIncrement={() => adjustElectrolytes(1)}
+          />
         </div>
       </div>
 
       {/* Today's Log */}
-      {entry?.entries && entry.entries.length > 0 && (
+      {reversedEntries.length > 0 && (
         <div>
           <h2 
             className="font-display font-semibold text-title-lg mb-4"
@@ -412,28 +412,11 @@ export default function Hydration({ userId }: HydrationProps) {
             Today&apos;s Log
           </h2>
           <div className="space-y-2">
-            {[...entry.entries].reverse().map((log: { time: string; amount_ml: number; type: string }, idx: number) => (
-              <div
-                key={idx}
-                className="card flex items-center justify-between"
-                style={{ backgroundColor: 'var(--surface-container-lowest)' }}
-              >
-                <div className="flex items-center gap-3">
-                  <Droplets size={20} style={{ color: 'var(--primary)' }} />
-                  <span className="text-body-md" style={{ color: 'var(--on-surface)' }}>
-                    {log.amount_ml}ml
-                  </span>
-                  <span 
-                    className="text-label-sm px-2 py-1 rounded-full capitalize"
-                    style={{ backgroundColor: 'var(--surface-container-high)' }}
-                  >
-                    {log.type}
-                  </span>
-                </div>
-                <span className="text-label-sm" style={{ color: 'var(--on-surface-variant)' }}>
-                  {formatTime(log.time)}
-                </span>
-              </div>
+            {reversedEntries.map((log, idx) => (
+              <LogEntry 
+                key={`${log.time}-${idx}`} 
+                log={log} 
+              />
             ))}
           </div>
         </div>
@@ -441,3 +424,72 @@ export default function Hydration({ userId }: HydrationProps) {
     </div>
   )
 }
+
+// Extracted counter card component
+interface CounterCardProps {
+  icon: typeof Leaf
+  iconColor: string
+  bgColor: string
+  title: string
+  subtitle: string
+  value: number
+  onDecrement: () => void
+  onIncrement: () => void
+}
+
+const CounterCard = memo(({
+  icon: Icon,
+  iconColor,
+  bgColor,
+  title,
+  subtitle,
+  value,
+  onDecrement,
+  onIncrement,
+}: CounterCardProps) => (
+  <div 
+    className="card"
+    style={{ backgroundColor: 'var(--surface-container-lowest)' }}
+  >
+    <div className="flex items-center gap-4">
+      <div 
+        className="w-14 h-14 rounded-xl flex items-center justify-center"
+        style={{ backgroundColor: bgColor }}
+      >
+        <Icon size={28} style={{ color: iconColor }} />
+      </div>
+      <div className="flex-1">
+        <p className="font-medium text-body-lg" style={{ color: 'var(--on-surface)' }}>
+          {title}
+        </p>
+        <p className="text-label-sm" style={{ color: 'var(--on-surface-variant)' }}>
+          {subtitle}
+        </p>
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onDecrement}
+          className="w-10 h-10 rounded-lg flex items-center justify-center"
+          style={{ backgroundColor: 'var(--surface-container-high)' }}
+        >
+          <Minus size={18} />
+        </button>
+        <span 
+          className="w-8 text-center font-semibold"
+          style={{ color: 'var(--on-surface)' }}
+        >
+          {value}
+        </span>
+        <button
+          onClick={onIncrement}
+          className="w-10 h-10 rounded-lg flex items-center justify-center"
+          style={{ backgroundColor: bgColor }}
+        >
+          <Plus size={18} style={{ color: iconColor }} />
+        </button>
+      </div>
+    </div>
+  </div>
+))
+
+CounterCard.displayName = 'CounterCard'

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo, memo } from 'react'
 import { 
   TrendingUp, 
   Camera, 
@@ -15,6 +15,64 @@ interface ProgressProps {
   userId: string
 }
 
+const MOOD_OPTIONS = ['terrible', 'bad', 'neutral', 'good', 'excellent'] as const
+
+const MOOD_ICONS: Record<string, string> = {
+  excellent: '🤩',
+  good: '🙂',
+  neutral: '😐',
+  bad: '😕',
+  terrible: '😫',
+}
+
+// Memoized mood button component
+const MoodButton = memo(({ 
+  mood, 
+  isSelected, 
+  onClick 
+}: { 
+  mood: typeof MOOD_OPTIONS[number]
+  isSelected: boolean
+  onClick: () => void 
+}) => (
+  <button
+    onClick={onClick}
+    className="flex-1 py-3 rounded-xl text-2xl transition-all"
+    style={{
+      backgroundColor: isSelected ? 'var(--primary-fixed)' : 'var(--surface-container-low)',
+    }}
+  >
+    {MOOD_ICONS[mood]}
+  </button>
+))
+
+MoodButton.displayName = 'MoodButton'
+
+// Memoized victory tag component
+const VictoryTag = memo(({
+  victory,
+  onRemove,
+}: {
+  victory: string
+  onRemove: () => void
+}) => (
+  <span
+    className="px-3 py-2 rounded-full text-label-sm flex items-center gap-2"
+    style={{ backgroundColor: 'var(--primary-fixed)' }}
+  >
+    {victory}
+    <button
+      onClick={onRemove}
+      className="w-5 h-5 rounded-full flex items-center justify-center"
+      style={{ backgroundColor: 'var(--surface-container-high)' }}
+    >
+      ×
+    </button>
+  </span>
+))
+
+VictoryTag.displayName = 'VictoryTag'
+
 export default function Progress({ userId }: ProgressProps) {
   const [entry, setEntry] = useState<ProgressEntry | null>(null)
   const [, setHistory] = useState<ProgressEntry[]>([])
@@ -24,7 +82,7 @@ export default function Progress({ userId }: ProgressProps) {
   // Form state
   const [weightKg, setWeightKg] = useState('')
   const [energyLevel, setEnergyLevel] = useState<number>(5)
-  const [mood, setMood] = useState<'terrible' | 'bad' | 'neutral' | 'good' | 'excellent'>('good')
+  const [mood, setMood] = useState<typeof MOOD_OPTIONS[number]>('good')
   const [stressLevel, setStressLevel] = useState<number>(5)
   const [nonScaleVictories, setNonScaleVictories] = useState<string[]>([])
   const [newVictory, setNewVictory] = useState('')
@@ -48,7 +106,7 @@ export default function Progress({ userId }: ProgressProps) {
     loadData()
   }, [loadData])
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     try {
       await progressAPI.update({
         userId,
@@ -65,29 +123,26 @@ export default function Progress({ userId }: ProgressProps) {
     } catch (error) {
       console.error('Failed to save progress:', error)
     }
-  }
+  }, [userId, weightKg, energyLevel, mood, stressLevel, nonScaleVictories, loadData])
 
-  const addVictory = () => {
+  const addVictory = useCallback(() => {
     if (newVictory.trim()) {
-      setNonScaleVictories([...nonScaleVictories, newVictory.trim()])
+      setNonScaleVictories(prev => [...prev, newVictory.trim()])
       setNewVictory('')
     }
-  }
+  }, [newVictory])
 
-  const removeVictory = (index: number) => {
-    setNonScaleVictories(nonScaleVictories.filter((_, i) => i !== index))
-  }
+  const removeVictory = useCallback((index: number) => {
+    setNonScaleVictories(prev => prev.filter((_, i) => i !== index))
+  }, [])
 
-  const getMoodIcon = (m: string) => {
-    switch (m) {
-      case 'excellent': return <span className="text-2xl">🤩</span>
-      case 'good': return <span className="text-2xl">🙂</span>
-      case 'neutral': return <span className="text-2xl">😐</span>
-      case 'bad': return <span className="text-2xl">😕</span>
-      case 'terrible': return <span className="text-2xl">😫</span>
-      default: return <span className="text-2xl">😐</span>
-    }
-  }
+  // Memoized mood icon getter
+  const getMoodIcon = useCallback((m: string) => {
+    return <span className="text-2xl">{MOOD_ICONS[m] ?? MOOD_ICONS.neutral}</span>
+  }, [])
+
+  // Memoized display date
+  const displayDate = useMemo(() => formatDisplayDate(getToday()), [])
 
   if (loading) {
     return (
@@ -139,7 +194,7 @@ export default function Progress({ userId }: ProgressProps) {
                 className="font-display font-bold text-display-sm"
                 style={{ color: 'white' }}
               >
-                {formatDisplayDate(getToday())}
+                {displayDate}
               </p>
             </div>
             <div 
@@ -293,149 +348,200 @@ export default function Progress({ userId }: ProgressProps) {
 
       {/* Add Progress Modal */}
       {showAddModal && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-          onClick={() => setShowAddModal(false)}
-        >
-          <div 
-            className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl p-6 animate-scale-in"
-            style={{ backgroundColor: 'var(--surface)' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 
-              className="font-display font-bold text-headline-md mb-6"
-              style={{ color: 'var(--on-surface)' }}
-            >
-              Daily Progress Check-In
-            </h2>
-
-            {/* Weight */}
-            <div className="mb-6">
-              <label className="block text-label-md mb-3" style={{ color: 'var(--on-surface-variant)' }}>
-                Weight (kg) - Optional
-              </label>
-              <input
-                type="number"
-                step="0.1"
-                placeholder="e.g., 70.5"
-                value={weightKg}
-                onChange={(e) => setWeightKg(e.target.value)}
-                className="input-field w-full"
-              />
-            </div>
-
-            {/* Energy Level */}
-            <div className="mb-6">
-              <label className="block text-label-md mb-3" style={{ color: 'var(--on-surface-variant)' }}>
-                Energy Level: {energyLevel}/10
-              </label>
-              <input
-                type="range"
-                min="1"
-                max="10"
-                value={energyLevel}
-                onChange={(e) => setEnergyLevel(parseInt(e.target.value))}
-                className="w-full"
-              />
-              <div className="flex justify-between text-label-sm mt-1" style={{ color: 'var(--outline)' }}>
-                <span>Low</span>
-                <span>High</span>
-              </div>
-            </div>
-
-            {/* Mood */}
-            <div className="mb-6">
-              <label className="block text-label-md mb-3" style={{ color: 'var(--on-surface-variant)' }}>
-                Mood Today
-              </label>
-              <div className="flex gap-2">
-                {(['terrible', 'bad', 'neutral', 'good', 'excellent'] as const).map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => setMood(m)}
-                    className="flex-1 py-3 rounded-xl text-2xl transition-all"
-                    style={{
-                      backgroundColor: mood === m ? 'var(--primary-fixed)' : 'var(--surface-container-low)',
-                    }}
-                  >
-                    {m === 'terrible' ? '😫' : m === 'bad' ? '😕' : m === 'neutral' ? '😐' : m === 'good' ? '🙂' : '🤩'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Stress Level */}
-            <div className="mb-6">
-              <label className="block text-label-md mb-3" style={{ color: 'var(--on-surface-variant)' }}>
-                Stress Level: {stressLevel}/10
-              </label>
-              <input
-                type="range"
-                min="1"
-                max="10"
-                value={stressLevel}
-                onChange={(e) => setStressLevel(parseInt(e.target.value))}
-                className="w-full"
-              />
-              <div className="flex justify-between text-label-sm mt-1" style={{ color: 'var(--outline)' }}>
-                <span>Calm</span>
-                <span>Stressed</span>
-              </div>
-            </div>
-
-            {/* Non-Scale Victories */}
-            <div className="mb-6">
-              <label className="block text-label-md mb-3" style={{ color: 'var(--on-surface-variant)' }}>
-                Non-Scale Victories
-              </label>
-              <div className="flex gap-2 mb-3">
-                <input
-                  type="text"
-                  placeholder="e.g., Better sleep, more energy..."
-                  value={newVictory}
-                  onChange={(e) => setNewVictory(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && addVictory()}
-                  className="input-field flex-1"
-                />
-                <button
-                  onClick={addVictory}
-                  className="px-4 py-3 rounded-xl"
-                  style={{ backgroundColor: 'var(--primary)', color: 'white' }}
-                >
-                  <Plus size={20} />
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {nonScaleVictories.map((victory, idx) => (
-                  <span
-                    key={idx}
-                    className="px-3 py-2 rounded-full text-label-sm flex items-center gap-2"
-                    style={{ backgroundColor: 'var(--primary-fixed)' }}
-                  >
-                    {victory}
-                    <button
-                      onClick={() => removeVictory(idx)}
-                      className="w-5 h-5 rounded-full flex items-center justify-center"
-                      style={{ backgroundColor: 'var(--surface-container-high)' }}
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Submit */}
-            <button
-              onClick={handleSave}
-              className="btn-primary w-full"
-            >
-              Save Progress
-            </button>
-          </div>
-        </div>
+        <AddProgressModal
+          weightKg={weightKg}
+          setWeightKg={setWeightKg}
+          energyLevel={energyLevel}
+          setEnergyLevel={setEnergyLevel}
+          mood={mood}
+          setMood={setMood}
+          stressLevel={stressLevel}
+          setStressLevel={setStressLevel}
+          nonScaleVictories={nonScaleVictories}
+          newVictory={newVictory}
+          setNewVictory={setNewVictory}
+          onAddVictory={addVictory}
+          onRemoveVictory={removeVictory}
+          onClose={() => setShowAddModal(false)}
+          onSave={handleSave}
+        />
       )}
     </div>
   )
 }
+
+interface AddProgressModalProps {
+  weightKg: string
+  setWeightKg: (value: string) => void
+  energyLevel: number
+  setEnergyLevel: (value: number) => void
+  mood: typeof MOOD_OPTIONS[number]
+  setMood: (value: typeof MOOD_OPTIONS[number]) => void
+  stressLevel: number
+  setStressLevel: (value: number) => void
+  nonScaleVictories: string[]
+  newVictory: string
+  setNewVictory: (value: string) => void
+  onAddVictory: () => void
+  onRemoveVictory: (index: number) => void
+  onClose: () => void
+  onSave: () => void
+}
+
+const AddProgressModal = memo(({
+  weightKg,
+  setWeightKg,
+  energyLevel,
+  setEnergyLevel,
+  mood,
+  setMood,
+  stressLevel,
+  setStressLevel,
+  nonScaleVictories,
+  newVictory,
+  setNewVictory,
+  onAddVictory,
+  onRemoveVictory,
+  onClose,
+  onSave,
+}: AddProgressModalProps) => {
+  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      onAddVictory()
+    }
+  }, [onAddVictory])
+
+  return (
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+      onClick={onClose}
+    >
+      <div 
+        className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl p-6 animate-scale-in"
+        style={{ backgroundColor: 'var(--surface)' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 
+          className="font-display font-bold text-headline-md mb-6"
+          style={{ color: 'var(--on-surface)' }}
+        >
+          Daily Progress Check-In
+        </h2>
+
+        {/* Weight */}
+        <div className="mb-6">
+          <label className="block text-label-md mb-3" style={{ color: 'var(--on-surface-variant)' }}>
+            Weight (kg) - Optional
+          </label>
+          <input
+            type="number"
+            step="0.1"
+            placeholder="e.g., 70.5"
+            value={weightKg}
+            onChange={(e) => setWeightKg(e.target.value)}
+            className="input-field w-full"
+          />
+        </div>
+
+        {/* Energy Level */}
+        <div className="mb-6">
+          <label className="block text-label-md mb-3" style={{ color: 'var(--on-surface-variant)' }}>
+            Energy Level: {energyLevel}/10
+          </label>
+          <input
+            type="range"
+            min="1"
+            max="10"
+            value={energyLevel}
+            onChange={(e) => setEnergyLevel(parseInt(e.target.value))}
+            className="w-full"
+          />
+          <div className="flex justify-between text-label-sm mt-1" style={{ color: 'var(--outline)' }}>
+            <span>Low</span>
+            <span>High</span>
+          </div>
+        </div>
+
+        {/* Mood */}
+        <div className="mb-6">
+          <label className="block text-label-md mb-3" style={{ color: 'var(--on-surface-variant)' }}>
+            Mood Today
+          </label>
+          <div className="flex gap-2">
+            {MOOD_OPTIONS.map((m) => (
+              <MoodButton
+                key={m}
+                mood={m}
+                isSelected={mood === m}
+                onClick={() => setMood(m)}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Stress Level */}
+        <div className="mb-6">
+          <label className="block text-label-md mb-3" style={{ color: 'var(--on-surface-variant)' }}>
+            Stress Level: {stressLevel}/10
+          </label>
+          <input
+            type="range"
+            min="1"
+            max="10"
+            value={stressLevel}
+            onChange={(e) => setStressLevel(parseInt(e.target.value))}
+            className="w-full"
+          />
+          <div className="flex justify-between text-label-sm mt-1" style={{ color: 'var(--outline)' }}>
+            <span>Calm</span>
+            <span>Stressed</span>
+          </div>
+        </div>
+
+        {/* Non-Scale Victories */}
+        <div className="mb-6">
+          <label className="block text-label-md mb-3" style={{ color: 'var(--on-surface-variant)' }}>
+            Non-Scale Victories
+          </label>
+          <div className="flex gap-2 mb-3">
+            <input
+              type="text"
+              placeholder="e.g., Better sleep, more energy..."
+              value={newVictory}
+              onChange={(e) => setNewVictory(e.target.value)}
+              onKeyPress={handleKeyPress}
+              className="input-field flex-1"
+            />
+            <button
+              onClick={onAddVictory}
+              className="px-4 py-3 rounded-xl"
+              style={{ backgroundColor: 'var(--primary)', color: 'white' }}
+            >
+              <Plus size={20} />
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {nonScaleVictories.map((victory, idx) => (
+              <VictoryTag
+                key={`${victory}-${idx}`}
+                victory={victory}
+                onRemove={() => onRemoveVictory(idx)}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Submit */}
+        <button
+          onClick={onSave}
+          className="btn-primary w-full"
+        >
+          Save Progress
+        </button>
+      </div>
+    </div>
+  )
+})
+
+AddProgressModal.displayName = 'AddProgressModal'

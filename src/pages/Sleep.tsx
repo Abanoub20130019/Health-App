@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo, memo } from 'react'
 import { 
   Moon, 
   Sun, 
@@ -16,6 +16,39 @@ interface SleepProps {
 }
 
 const SLEEP_GOAL_HOURS = 8
+
+// Memoized stat card component
+const StatCard = memo(({
+  icon: Icon,
+  iconColor,
+  label,
+  value,
+}: {
+  icon: typeof Clock
+  iconColor: string
+  label: string
+  value: string
+}) => (
+  <div 
+    className="card"
+    style={{ backgroundColor: 'var(--surface-container-low)' }}
+  >
+    <div className="flex items-center gap-2 mb-2">
+      <Icon size={18} style={{ color: iconColor }} />
+      <span className="text-label-sm" style={{ color: 'var(--on-surface-variant)' }}>
+        {label}
+      </span>
+    </div>
+    <p 
+      className="font-display font-bold text-headline-md"
+      style={{ color: 'var(--on-surface)' }}
+    >
+      {value}
+    </p>
+  </div>
+))
+
+StatCard.displayName = 'StatCard'
 
 export default function Sleep({ userId }: SleepProps) {
   const [entry, setEntry] = useState<SleepEntry | null>(null)
@@ -49,7 +82,8 @@ export default function Sleep({ userId }: SleepProps) {
     loadData()
   }, [loadData])
 
-  const calculateDuration = (bed: string, wake: string): number => {
+  // Memoized duration calculation
+  const calculateDuration = useCallback((bed: string, wake: string): number => {
     const [bedHours, bedMins] = bed.split(':').map(Number)
     const [wakeHours, wakeMins] = wake.split(':').map(Number)
     
@@ -57,9 +91,9 @@ export default function Sleep({ userId }: SleepProps) {
     duration += (wakeMins - bedMins) / 60
     
     return Math.max(0, duration)
-  }
+  }, [])
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     const duration = calculateDuration(bedtime, wakeTime)
     
     try {
@@ -79,11 +113,13 @@ export default function Sleep({ userId }: SleepProps) {
     } catch (error) {
       console.error('Failed to save sleep:', error)
     }
-  }
+  }, [userId, bedtime, wakeTime, screenCurfew, sunlightMinutes, sleepQuality, calculateDuration, loadData])
 
-  const sleepProgress = entry 
-    ? Math.min((entry.duration_hours / SLEEP_GOAL_HOURS) * 100, 100)
-    : 0
+  // Memoized progress calculation
+  const sleepProgress = useMemo(() => {
+    if (!entry) return 0
+    return Math.min((entry.duration_hours / SLEEP_GOAL_HOURS) * 100, 100)
+  }, [entry])
 
   if (loading) {
     return (
@@ -207,41 +243,18 @@ export default function Sleep({ userId }: SleepProps) {
       {/* Sleep Stats */}
       {stats && (
         <div className="grid grid-cols-2 gap-4">
-          <div 
-            className="card"
-            style={{ backgroundColor: 'var(--surface-container-low)' }}
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <Clock size={18} style={{ color: 'var(--primary)' }} />
-              <span className="text-label-sm" style={{ color: 'var(--on-surface-variant)' }}>
-                Avg Duration
-              </span>
-            </div>
-            <p 
-              className="font-display font-bold text-headline-md"
-              style={{ color: 'var(--on-surface)' }}
-            >
-              {stats.averageDuration.toFixed(1)}h
-            </p>
-          </div>
-
-          <div 
-            className="card"
-            style={{ backgroundColor: 'var(--surface-container-low)' }}
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <Heart size={18} style={{ color: 'var(--tertiary)' }} />
-              <span className="text-label-sm" style={{ color: 'var(--on-surface-variant)' }}>
-                Avg Quality
-              </span>
-            </div>
-            <p 
-              className="font-display font-bold text-headline-md"
-              style={{ color: 'var(--on-surface)' }}
-            >
-              {stats.averageQuality.toFixed(1)}/5
-            </p>
-          </div>
+          <StatCard 
+            icon={Clock}
+            iconColor="var(--primary)"
+            label="Avg Duration"
+            value={`${stats.averageDuration.toFixed(1)}h`}
+          />
+          <StatCard 
+            icon={Heart}
+            iconColor="var(--tertiary)"
+            label="Avg Quality"
+            value={`${stats.averageQuality.toFixed(1)}/5`}
+          />
         </div>
       )}
 
@@ -320,136 +333,195 @@ export default function Sleep({ userId }: SleepProps) {
 
       {/* Add Sleep Modal */}
       {showAddModal && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-          onClick={() => setShowAddModal(false)}
-        >
-          <div 
-            className="w-full max-w-lg rounded-2xl p-6 animate-scale-in"
-            style={{ backgroundColor: 'var(--surface)' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 
-              className="font-display font-bold text-headline-md mb-6"
-              style={{ color: 'var(--on-surface)' }}
-            >
-              Log Sleep
-            </h2>
-
-            {/* Bedtime */}
-            <div className="mb-6">
-              <label className="block text-label-md mb-3" style={{ color: 'var(--on-surface-variant)' }}>
-                Bedtime
-              </label>
-              <input
-                type="time"
-                value={bedtime}
-                onChange={(e) => setBedtime(e.target.value)}
-                className="input-field w-full text-center text-display-sm font-display"
-              />
-            </div>
-
-            {/* Wake Time */}
-            <div className="mb-6">
-              <label className="block text-label-md mb-3" style={{ color: 'var(--on-surface-variant)' }}>
-                Wake Time
-              </label>
-              <input
-                type="time"
-                value={wakeTime}
-                onChange={(e) => setWakeTime(e.target.value)}
-                className="input-field w-full text-center text-display-sm font-display"
-              />
-            </div>
-
-            {/* Calculated Duration */}
-            <div 
-              className="p-4 rounded-xl mb-6 text-center"
-              style={{ backgroundColor: 'var(--surface-container-low)' }}
-            >
-              <p className="text-label-md" style={{ color: 'var(--on-surface-variant)' }}>
-                Total Sleep
-              </p>
-              <p 
-                className="font-display font-bold text-headline-lg"
-                style={{ color: 'var(--primary)' }}
-              >
-                {calculateDuration(bedtime, wakeTime).toFixed(1)} hours
-              </p>
-            </div>
-
-            {/* Screen Curfew */}
-            <div className="mb-6">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={screenCurfew}
-                  onChange={(e) => setScreenCurfew(e.target.checked)}
-                  className="w-6 h-6 rounded-lg"
-                />
-                <span className="text-body-lg" style={{ color: 'var(--on-surface)' }}>
-                  No screens 1 hour before bed
-                </span>
-              </label>
-            </div>
-
-            {/* Morning Sunlight */}
-            <div className="mb-6">
-              <label className="block text-label-md mb-3" style={{ color: 'var(--on-surface-variant)' }}>
-                Morning Sunlight (minutes)
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="60"
-                value={sunlightMinutes}
-                onChange={(e) => setSunlightMinutes(parseInt(e.target.value))}
-                className="w-full"
-              />
-              <div className="text-center mt-2">
-                <span 
-                  className="font-display font-bold text-headline-sm"
-                  style={{ color: 'var(--primary)' }}
-                >
-                  {sunlightMinutes} min
-                </span>
-              </div>
-            </div>
-
-            {/* Sleep Quality */}
-            <div className="mb-6">
-              <label className="block text-label-md mb-3" style={{ color: 'var(--on-surface-variant)' }}>
-                Sleep Quality
-              </label>
-              <div className="flex gap-2">
-                {[1, 2, 3, 4, 5].map((score) => (
-                  <button
-                    key={score}
-                    onClick={() => setSleepQuality(score as 1 | 2 | 3 | 4 | 5)}
-                    className="flex-1 py-3 rounded-xl text-2xl transition-all"
-                    style={{
-                      backgroundColor: sleepQuality === score 
-                        ? '#ede7f6' 
-                        : 'var(--surface-container-low)',
-                    }}
-                  >
-                    {score <= sleepQuality ? '⭐' : '☆'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Submit */}
-            <button
-              onClick={handleSave}
-              className="btn-primary w-full"
-            >
-              Save Sleep Log
-            </button>
-          </div>
-        </div>
+        <AddSleepModal
+          bedtime={bedtime}
+          setBedtime={setBedtime}
+          wakeTime={wakeTime}
+          setWakeTime={setWakeTime}
+          screenCurfew={screenCurfew}
+          setScreenCurfew={setScreenCurfew}
+          sunlightMinutes={sunlightMinutes}
+          setSunlightMinutes={setSunlightMinutes}
+          sleepQuality={sleepQuality}
+          setSleepQuality={setSleepQuality}
+          calculateDuration={calculateDuration}
+          onClose={() => setShowAddModal(false)}
+          onSave={handleSave}
+        />
       )}
     </div>
   )
 }
+
+// Extracted add sleep modal component
+interface AddSleepModalProps {
+  bedtime: string
+  setBedtime: (value: string) => void
+  wakeTime: string
+  setWakeTime: (value: string) => void
+  screenCurfew: boolean
+  setScreenCurfew: (value: boolean) => void
+  sunlightMinutes: number
+  setSunlightMinutes: (value: number) => void
+  sleepQuality: 1 | 2 | 3 | 4 | 5
+  setSleepQuality: (value: 1 | 2 | 3 | 4 | 5) => void
+  calculateDuration: (bed: string, wake: string) => number
+  onClose: () => void
+  onSave: () => void
+}
+
+const AddSleepModal = memo(({
+  bedtime,
+  setBedtime,
+  wakeTime,
+  setWakeTime,
+  screenCurfew,
+  setScreenCurfew,
+  sunlightMinutes,
+  setSunlightMinutes,
+  sleepQuality,
+  setSleepQuality,
+  calculateDuration,
+  onClose,
+  onSave,
+}: AddSleepModalProps) => {
+  // Memoized calculated duration
+  const duration = useMemo(() => 
+    calculateDuration(bedtime, wakeTime),
+    [bedtime, wakeTime, calculateDuration]
+  )
+
+  return (
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+      onClick={onClose}
+    >
+      <div 
+        className="w-full max-w-lg rounded-2xl p-6 animate-scale-in"
+        style={{ backgroundColor: 'var(--surface)' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 
+          className="font-display font-bold text-headline-md mb-6"
+          style={{ color: 'var(--on-surface)' }}
+        >
+          Log Sleep
+        </h2>
+
+        {/* Bedtime */}
+        <div className="mb-6">
+          <label className="block text-label-md mb-3" style={{ color: 'var(--on-surface-variant)' }}>
+            Bedtime
+          </label>
+          <input
+            type="time"
+            value={bedtime}
+            onChange={(e) => setBedtime(e.target.value)}
+            className="input-field w-full text-center text-display-sm font-display"
+          />
+        </div>
+
+        {/* Wake Time */}
+        <div className="mb-6">
+          <label className="block text-label-md mb-3" style={{ color: 'var(--on-surface-variant)' }}>
+            Wake Time
+          </label>
+          <input
+            type="time"
+            value={wakeTime}
+            onChange={(e) => setWakeTime(e.target.value)}
+            className="input-field w-full text-center text-display-sm font-display"
+          />
+        </div>
+
+        {/* Calculated Duration */}
+        <div 
+          className="p-4 rounded-xl mb-6 text-center"
+          style={{ backgroundColor: 'var(--surface-container-low)' }}
+        >
+          <p className="text-label-md" style={{ color: 'var(--on-surface-variant)' }}>
+            Total Sleep
+          </p>
+          <p 
+            className="font-display font-bold text-headline-lg"
+            style={{ color: 'var(--primary)' }}
+          >
+            {duration.toFixed(1)} hours
+          </p>
+        </div>
+
+        {/* Screen Curfew */}
+        <div className="mb-6">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={screenCurfew}
+              onChange={(e) => setScreenCurfew(e.target.checked)}
+              className="w-6 h-6 rounded-lg"
+            />
+            <span className="text-body-lg" style={{ color: 'var(--on-surface)' }}>
+              No screens 1 hour before bed
+            </span>
+          </label>
+        </div>
+
+        {/* Morning Sunlight */}
+        <div className="mb-6">
+          <label className="block text-label-md mb-3" style={{ color: 'var(--on-surface-variant)' }}>
+            Morning Sunlight (minutes)
+          </label>
+          <input
+            type="range"
+            min="0"
+            max="60"
+            value={sunlightMinutes}
+            onChange={(e) => setSunlightMinutes(parseInt(e.target.value))}
+            className="w-full"
+          />
+          <div className="text-center mt-2">
+            <span 
+              className="font-display font-bold text-headline-sm"
+              style={{ color: 'var(--primary)' }}
+            >
+              {sunlightMinutes} min
+            </span>
+          </div>
+        </div>
+
+        {/* Sleep Quality */}
+        <div className="mb-6">
+          <label className="block text-label-md mb-3" style={{ color: 'var(--on-surface-variant)' }}>
+            Sleep Quality
+          </label>
+          <div className="flex gap-2">
+            {[1, 2, 3, 4, 5].map((score) => (
+              <button
+                key={score}
+                onClick={() => setSleepQuality(score as 1 | 2 | 3 | 4 | 5)}
+                className="flex-1 py-3 rounded-xl text-2xl transition-all"
+                style={{
+                  backgroundColor: sleepQuality === score 
+                    ? '#ede7f6' 
+                    : 'var(--surface-container-low)',
+                }}
+              >
+                {score <= sleepQuality ? '⭐' : '☆'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Submit */}
+        <button
+          onClick={onSave}
+          className="btn-primary w-full"
+        >
+          Save Sleep Log
+        </button>
+      </div>
+    </div>
+  )
+})
+
+AddSleepModal.displayName = 'AddSleepModal'

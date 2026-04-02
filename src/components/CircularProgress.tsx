@@ -1,3 +1,5 @@
+import { useMemo, memo } from 'react'
+
 interface CircularProgressProps {
   progress: number
   size?: number
@@ -7,7 +9,8 @@ interface CircularProgressProps {
   showPercentage?: boolean
 }
 
-export default function CircularProgress({
+// Using memo to prevent unnecessary re-renders when props haven't changed
+const CircularProgress = memo(function CircularProgress({
   progress,
   size = 80,
   strokeWidth = 6,
@@ -15,9 +18,18 @@ export default function CircularProgress({
   bgColor = 'var(--surface-container-high)',
   showPercentage = false,
 }: CircularProgressProps) {
-  const radius = (size - strokeWidth) / 2
-  const circumference = radius * 2 * Math.PI
-  const offset = circumference - (progress / 100) * circumference
+  // Memoize calculations to prevent recalculation on every render
+  const { radius, circumference, offset } = useMemo(() => {
+    const radius = (size - strokeWidth) / 2
+    const circumference = radius * 2 * Math.PI
+    const offset = circumference - (progress / 100) * circumference
+    return { radius, circumference, offset }
+  }, [size, strokeWidth, progress])
+
+  // Memoize styles to prevent object recreation
+  const shadowStyle = useMemo(() => ({
+    filter: `drop-shadow(0 2px 4px ${color}40)`,
+  }), [color])
 
   return (
     <div className="relative" style={{ width: size, height: size }}>
@@ -43,9 +55,7 @@ export default function CircularProgress({
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           className="progress-ring-circle"
-          style={{
-            filter: `drop-shadow(0 2px 4px ${color}40)`,
-          }}
+          style={shadowStyle}
         />
       </svg>
       {showPercentage && (
@@ -60,4 +70,6 @@ export default function CircularProgress({
       )}
     </div>
   )
-}
+})
+
+export default CircularProgress

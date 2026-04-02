@@ -2,6 +2,86 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================
+   PERFORMANCE & RESPONSIVENESS OPTIMIZATIONS
+   ============================================ */
+
+/* GPU Acceleration for animated elements */
+.animate-pulse,
+.animate-pulse-soft,
+.animate-slide-up,
+.animate-scale-in {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Optimize touch response */
+button, 
+a, 
+[role="button"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Responsive container - centers content on large screens */
+#root {
+  min-height: 100vh;
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+}
+
+/* On larger screens, add subtle shadow to container */
+@media (min-width: 481px) {
+  #root {
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.08);
+  }
+}
+
+/* Disable animations for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Prevent text selection on interactive elements */
+.card,
+button,
+[role="button"] {
+  user-select: none;
+}
+
+/* Improve font rendering */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* CSS Containment for better rendering performance */
+.card,
+.card-elevated {
+  contain: layout style paint;
+}
+
+/* Optimize fixed elements */
+header,
+nav {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
 :root {
   /* Primary - Deep Forest */
   --primary: #012d1d;
