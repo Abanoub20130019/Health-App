@@ -210,11 +210,7 @@ export interface Database {
           caffeine_after_2pm: boolean
           herbal_teas: number
           electrolytes: number
-          entries: Array<{
-            time: string
-            amount_ml: number
-            type: string
-          }>
+          entries: any
           created_at: string
           updated_at: string
         }
@@ -227,11 +223,7 @@ export interface Database {
           caffeine_after_2pm?: boolean
           herbal_teas?: number
           electrolytes?: number
-          entries?: Array<{
-            time: string
-            amount_ml: number
-            type: string
-          }>
+          entries?: any
           created_at?: string
           updated_at?: string
         }
@@ -244,11 +236,7 @@ export interface Database {
           caffeine_after_2pm?: boolean
           herbal_teas?: number
           electrolytes?: number
-          entries?: Array<{
-            time: string
-            amount_ml: number
-            type: string
-          }>
+          entries?: any
           created_at?: string
           updated_at?: string
         }
@@ -351,7 +339,7 @@ export interface Database {
           energy_level: number | null
           mood: string | null
           stress_level: number | null
-          body_measurements: object | null
+          body_measurements: any
           progress_photo_url: string | null
           non_scale_victories: string[] | null
           notes: string | null
@@ -367,7 +355,7 @@ export interface Database {
           energy_level?: number | null
           mood?: string | null
           stress_level?: number | null
-          body_measurements?: object | null
+          body_measurements?: any
           progress_photo_url?: string | null
           non_scale_victories?: string[] | null
           notes?: string | null
@@ -383,7 +371,7 @@ export interface Database {
           energy_level?: number | null
           mood?: string | null
           stress_level?: number | null
-          body_measurements?: object | null
+          body_measurements?: any
           progress_photo_url?: string | null
           non_scale_victories?: string[] | null
           notes?: string | null
@@ -422,6 +410,70 @@ export interface Database {
           missed_habits?: string[] | null
           reflection_notes?: string | null
           tomorrow_intentions?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      weekly_reflections: {
+        Row: {
+          id: string
+          user_id: string
+          week_start: string
+          what_worked: string | null
+          what_didnt: string | null
+          adjustments_for_next: string | null
+          wins: string[] | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          week_start: string
+          what_worked?: string | null
+          what_didnt?: string | null
+          adjustments_for_next?: string | null
+          wins?: string[] | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          week_start?: string
+          what_worked?: string | null
+          what_didnt?: string | null
+          adjustments_for_next?: string | null
+          wins?: string[] | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      monthly_goals: {
+        Row: {
+          id: string
+          user_id: string
+          month: string
+          goals: any
+          review_notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          month: string
+          goals?: any
+          review_notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          month?: string
+          goals?: any
+          review_notes?: string | null
           created_at?: string
           updated_at?: string
         }
