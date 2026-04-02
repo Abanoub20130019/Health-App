@@ -4,12 +4,10 @@ import {
   Sun, 
   Smartphone,
   Clock,
-  TrendingUp,
-  Calendar,
   Heart
 } from 'lucide-react'
 import { sleepAPI } from '../lib/api'
-import { getToday, formatDisplayDate, formatTime } from '../utils/date'
+import { getToday, formatTime } from '../utils/date'
 import CircularProgress from '../components/CircularProgress'
 import type { SleepEntry, SleepStats } from '../types'
 

@@ -1,12 +1,9 @@
 import { useEffect, useState, useCallback } from 'react'
 import { 
   CheckCircle2, 
-  Calendar, 
   Target,
   Sparkles,
-  ChevronRight,
-  Trophy,
-  TrendingUp
+  Trophy
 } from 'lucide-react'
 import { checkInAPI, dashboardAPI } from '../lib/api'
 import { getToday, formatDisplayDate, getCurrentMonth } from '../utils/date'
@@ -17,8 +14,8 @@ interface CheckInProps {
 }
 
 export default function CheckIn({ userId }: CheckInProps) {
-  const [checkIn, setCheckIn] = useState<DailyCheckIn | null>(null)
-  const [weeklyReflection, setWeeklyReflection] = useState<WeeklyReflection | null>(null)
+  const [, setCheckIn] = useState<DailyCheckIn | null>(null)
+  const [, setWeeklyReflection] = useState<WeeklyReflection | null>(null)
   const [monthlyGoals, setMonthlyGoals] = useState<MonthlyGoal | null>(null)
   const [dailySummary, setDailySummary] = useState<{ overallScore: number } | null>(null)
   const [loading, setLoading] = useState(true)

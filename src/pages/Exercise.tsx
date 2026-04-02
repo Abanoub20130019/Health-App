@@ -3,8 +3,7 @@ import {
   Dumbbell, 
   Plus, 
   Flame, 
-  Clock, 
-  Heart,
+  Clock,
   TrendingUp,
   Calendar,
   X

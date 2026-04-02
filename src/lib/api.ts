@@ -17,12 +17,6 @@ import type {
   User
 } from '../types'
 
-// Type helpers for Supabase
-type Tables = 'users' | 'fasting_sessions' | 'avoidance_entries' | 'walking_entries' | 
-              'exercise_sessions' | 'hydration_entries' | 'sleep_entries' | 
-              'mindful_eating_entries' | 'progress_entries' | 'daily_checkins' | 
-              'weekly_reflections' | 'monthly_goals'
-
 // ==================== AUTH ====================
 export const authAPI = {
   signUp: async (email: string, password: string, name: string) => {
@@ -79,7 +73,7 @@ export const userAPI = {
     // Create new user
     const { data, error } = await supabase
       .from('users')
-      .insert({ email, name } as any)
+      .insert([{ email, name }])
       .select()
       .single()
     
@@ -101,7 +95,7 @@ export const userAPI = {
   update: async (userId: string, updates: Partial<User>) => {
     const { data, error } = await supabase
       .from('users')
-      .update(updates as any)
+      .update(updates)
       .eq('id', userId)
       .select()
       .single()
@@ -150,7 +144,7 @@ export const fastingAPI = {
     
     const { data: result, error } = await supabase
       .from('fasting_sessions')
-      .insert(insertData as any)
+      .insert([insertData])
       .select()
       .single()
     
@@ -168,7 +162,7 @@ export const fastingAPI = {
     
     if (fetchError) throw fetchError
     
-    const sessionData = session as any
+    const sessionData = session as FastingSession
     const startTime = new Date(sessionData.start_time)
     const endTime = new Date()
     const durationHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60)
@@ -185,7 +179,7 @@ export const fastingAPI = {
     
     const { data: result, error } = await supabase
       .from('fasting_sessions')
-      .update(updateData as any)
+      .update(updateData)
       .eq('id', fastingId)
       .select()
       .single()
@@ -253,8 +247,8 @@ export const avoidanceAPI = {
     if (existing) {
       const { data: result, error } = await supabase
         .from('avoidance_entries')
-        .update({ avoided: data.avoided } as any)
-        .eq('id', (existing as any).id)
+        .update({ avoided: data.avoided })
+        .eq('id', (existing as AvoidanceEntry).id)
         .select()
         .single()
       
@@ -271,7 +265,7 @@ export const avoidanceAPI = {
       
       const { data: result, error } = await supabase
         .from('avoidance_entries')
-        .insert(insertData as any)
+        .insert([insertData])
         .select()
         .single()
       
@@ -359,8 +353,8 @@ export const walkingAPI = {
     if (existing) {
       const { data: result, error } = await supabase
         .from('walking_entries')
-        .update({ ...updates, updated_at: new Date().toISOString() } as any)
-        .eq('id', (existing as any).id)
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', (existing as WalkingEntry).id)
         .select()
         .single()
       
@@ -369,11 +363,11 @@ export const walkingAPI = {
     } else {
       const { data: result, error } = await supabase
         .from('walking_entries')
-        .insert({
+        .insert([{
           user_id: userId,
           date: date,
           ...updates,
-        } as any)
+        }])
         .select()
         .single()
       
@@ -432,10 +426,10 @@ export const exerciseAPI = {
     
     const { data: result, error } = await supabase
       .from('exercise_sessions')
-      .insert({
+      .insert([{
         user_id: userId,
         ...sessionData,
-      } as any)
+      }])
       .select()
       .single()
     
@@ -517,7 +511,7 @@ export const hydrationAPI = {
     const entry = { time: data.time, amount_ml: data.amount, type: data.type }
     
     if (existing) {
-      const existingData = existing as any
+      const existingData = existing as HydrationEntry
       const currentEntries = existingData.entries || []
       const newEntries = [...currentEntries, entry]
       const newTotal = newEntries.reduce((sum: number, e: any) => sum + e.amount_ml, 0)
@@ -528,8 +522,8 @@ export const hydrationAPI = {
           total_ml: newTotal,
           entries: newEntries,
           updated_at: new Date().toISOString(),
-        } as any)
-        .eq('id', existingData.id)
+        })
+        .eq('id', (existing as HydrationEntry).id)
         .select()
         .single()
       
@@ -538,12 +532,12 @@ export const hydrationAPI = {
     } else {
       const { data: result, error } = await supabase
         .from('hydration_entries')
-        .insert({
+        .insert([{
           user_id: data.userId,
           date: data.date,
           total_ml: data.amount,
           entries: [entry],
-        } as any)
+        }])
         .select()
         .single()
       
@@ -567,8 +561,8 @@ export const hydrationAPI = {
     if (existing) {
       const { data: result, error } = await supabase
         .from('hydration_entries')
-        .update({ ...updates, updated_at: new Date().toISOString() } as any)
-        .eq('id', (existing as any).id)
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', (existing as HydrationEntry).id)
         .select()
         .single()
       
@@ -577,7 +571,7 @@ export const hydrationAPI = {
     } else {
       const { data: result, error } = await supabase
         .from('hydration_entries')
-        .insert({ user_id: userId, date: date, ...updates } as any)
+        .insert([{ user_id: userId, date: date, ...updates }])
         .select()
         .single()
       
@@ -617,8 +611,8 @@ export const sleepAPI = {
     if (existing) {
       const { data: result, error } = await supabase
         .from('sleep_entries')
-        .update({ ...sleepData, updated_at: new Date().toISOString() } as any)
-        .eq('id', (existing as any).id)
+        .update({ ...sleepData, updated_at: new Date().toISOString() })
+        .eq('id', (existing as SleepEntry).id)
         .select()
         .single()
       
@@ -627,7 +621,7 @@ export const sleepAPI = {
     } else {
       const { data: result, error } = await supabase
         .from('sleep_entries')
-        .insert({ user_id: userId, ...sleepData } as any)
+        .insert([{ user_id: userId, ...sleepData }])
         .select()
         .single()
       
@@ -695,8 +689,8 @@ export const mindfulEatingAPI = {
     if (existing) {
       const { data: result, error } = await supabase
         .from('mindful_eating_entries')
-        .update({ ...updates, updated_at: new Date().toISOString() } as any)
-        .eq('id', (existing as any).id)
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', (existing as MindfulEatingEntry).id)
         .select()
         .single()
       
@@ -705,7 +699,7 @@ export const mindfulEatingAPI = {
     } else {
       const { data: result, error } = await supabase
         .from('mindful_eating_entries')
-        .insert({ user_id: userId, date: date, ...updates } as any)
+        .insert([{ user_id: userId, date: date, ...updates }])
         .select()
         .single()
       
@@ -744,8 +738,8 @@ export const progressAPI = {
     if (existing) {
       const { data: result, error } = await supabase
         .from('progress_entries')
-        .update({ ...updates, updated_at: new Date().toISOString() } as any)
-        .eq('id', (existing as any).id)
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', (existing as ProgressEntry).id)
         .select()
         .single()
       
@@ -754,7 +748,7 @@ export const progressAPI = {
     } else {
       const { data: result, error } = await supabase
         .from('progress_entries')
-        .insert({ user_id: userId, date: date, ...updates } as any)
+        .insert([{ user_id: userId, date: date, ...updates }])
         .select()
         .single()
       
@@ -805,8 +799,8 @@ export const checkInAPI = {
     if (existing) {
       const { data: result, error } = await supabase
         .from('daily_checkins')
-        .update({ ...checkInData, updated_at: new Date().toISOString() } as any)
-        .eq('id', (existing as any).id)
+        .update({ ...checkInData, updated_at: new Date().toISOString() })
+        .eq('id', (existing as DailyCheckIn).id)
         .select()
         .single()
       
@@ -815,7 +809,65 @@ export const checkInAPI = {
     } else {
       const { data: result, error } = await supabase
         .from('daily_checkins')
-        .insert({ user_id: userId, date: date, ...checkInData } as any)
+        .insert([{ user_id: userId, date: date, ...checkInData }])
+        .select()
+        .single()
+      
+      if (error) throw error
+      return result
+    }
+  },
+  
+  getWeekly: async (userId: string, weekStart: string) => {
+    const { data, error } = await supabase
+      .from('weekly_reflections')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('week_start', weekStart)
+      .single()
+    
+    if (error && error.code !== 'PGRST116') throw error
+    return data
+  },
+  
+  getMonthlyGoals: async (userId: string, month: string) => {
+    const { data, error } = await supabase
+      .from('monthly_goals')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('month', month)
+      .single()
+    
+    if (error && error.code !== 'PGRST116') throw error
+    return data
+  },
+  
+  saveGoals: async (data: { userId: string; month: string; goals: unknown[] }) => {
+    const { userId, month, goals } = data
+    
+    const { data: existing, error: fetchError } = await supabase
+      .from('monthly_goals')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('month', month)
+      .single()
+    
+    if (fetchError && fetchError.code !== 'PGRST116') throw fetchError
+    
+    if (existing) {
+      const { data: result, error } = await supabase
+        .from('monthly_goals')
+        .update({ goals, updated_at: new Date().toISOString() })
+        .eq('id', (existing as any).id)
+        .select()
+        .single()
+      
+      if (error) throw error
+      return result
+    } else {
+      const { data: result, error } = await supabase
+        .from('monthly_goals')
+        .insert([{ user_id: userId, month, goals }])
         .select()
         .single()
       
@@ -828,56 +880,56 @@ export const checkInAPI = {
 // ==================== DASHBOARD ====================
 export const dashboardAPI = {
   getDailySummary: async (userId: string, date: string) => {
-    // Fetch all daily data
-    const [fasting, avoidances, walking, exercise, hydration, sleep, mindful, progress] = await Promise.all([
-      supabase.from('fasting_sessions').select('*').eq('user_id', userId).gte('start_time', date).lt('start_time', date + 'T23:59:59').limit(1).single().catch(() => ({ data: null })),
+    // Fetch all daily data (with safe single row fetching)
+    const [fastingRes, avoidancesRes, walkingRes, exerciseRes, hydrationRes, sleepRes, mindfulRes, progressRes] = await Promise.all([
+      Promise.resolve(supabase.from('fasting_sessions').select('*').eq('user_id', userId).gte('start_time', date).lt('start_time', date + 'T23:59:59').limit(1).single()).then((r: any) => r.data).catch(() => null),
       supabase.from('avoidance_entries').select('*').eq('user_id', userId).eq('date', date),
-      supabase.from('walking_entries').select('*').eq('user_id', userId).eq('date', date).single().catch(() => ({ data: null })),
+      Promise.resolve(supabase.from('walking_entries').select('*').eq('user_id', userId).eq('date', date).single()).then((r: any) => r.data).catch(() => null),
       supabase.from('exercise_sessions').select('*').eq('user_id', userId).eq('date', date),
-      supabase.from('hydration_entries').select('*').eq('user_id', userId).eq('date', date).single().catch(() => ({ data: null })),
-      supabase.from('sleep_entries').select('*').eq('user_id', userId).eq('date', date).single().catch(() => ({ data: null })),
-      supabase.from('mindful_eating_entries').select('*').eq('user_id', userId).eq('date', date).single().catch(() => ({ data: null })),
-      supabase.from('progress_entries').select('*').eq('user_id', userId).eq('date', date).single().catch(() => ({ data: null })),
+      Promise.resolve(supabase.from('hydration_entries').select('*').eq('user_id', userId).eq('date', date).single()).then((r: any) => r.data).catch(() => null),
+      Promise.resolve(supabase.from('sleep_entries').select('*').eq('user_id', userId).eq('date', date).single()).then((r: any) => r.data).catch(() => null),
+      Promise.resolve(supabase.from('mindful_eating_entries').select('*').eq('user_id', userId).eq('date', date).single()).then((r: any) => r.data).catch(() => null),
+      Promise.resolve(supabase.from('progress_entries').select('*').eq('user_id', userId).eq('date', date).single()).then((r: any) => r.data).catch(() => null),
     ])
     
     // Calculate score
     let score = 0
     
     // Fasting (15%)
-    const fastingData = fasting.data as any
+    const fastingData = fastingRes as any
     const fastingActive = fastingData && !fastingData.end_time
     if (fastingActive || (fastingData && !fastingData.broken_early)) score += 15
     
     // Avoidances (15%)
-    const avoidancesData = (avoidances.data || []) as AvoidanceEntry[]
+    const avoidancesData = (avoidancesRes.data || []) as AvoidanceEntry[]
     const avoidancesCompleted = avoidancesData.filter((a: AvoidanceEntry) => a.avoided).length
     const avoidancesScore = avoidancesData.length > 0 ? (avoidancesCompleted / avoidancesData.length) * 15 : 0
     score += avoidancesScore
     
     // Steps (15%)
-    const walkingData = walking.data as WalkingEntry
+    const walkingData = walkingRes as WalkingEntry
     const steps = walkingData?.step_count || 0
     const stepsScore = Math.min((steps / 10000) * 15, 15)
     score += stepsScore
     
     // Exercise (10%)
-    const exerciseData = exercise.data as ExerciseSession[]
+    const exerciseData = exerciseRes.data as ExerciseSession[]
     if (exerciseData?.length > 0) score += 10
     
     // Hydration (15%)
-    const hydrationData = hydration.data as HydrationEntry
+    const hydrationData = hydrationRes as HydrationEntry
     const hydrationAmount = hydrationData?.total_ml || 0
     const hydrationScore = Math.min((hydrationAmount / 2500) * 15, 15)
     score += hydrationScore
     
     // Sleep (15%)
-    const sleepData = sleep.data as SleepEntry
+    const sleepData = sleepRes as SleepEntry
     const sleepHours = sleepData?.duration_hours || 0
     const sleepScore = sleepHours >= 7 ? 15 : Math.min((sleepHours / 7) * 15, 15)
     score += sleepScore
     
     // Mindful Eating (15%)
-    const mindfulData = mindful.data as MindfulEatingEntry
+    const mindfulData = mindfulRes as MindfulEatingEntry
     const mindfulScore = mindfulData ? Math.min(
       ((mindfulData.protein_prioritized_meals || 0) / (mindfulData.meals_count || 1)) * 5 +
       Math.min((mindfulData.vegetable_servings || 0) / 5, 1) * 5 +
@@ -897,7 +949,7 @@ export const dashboardAPI = {
       hydrationPercent: Math.round((hydrationAmount / 2500) * 100),
       sleepHours,
       mindfulEatingScore: Math.round(mindfulScore),
-      energyLevel: (progress.data as ProgressEntry)?.energy_level || null,
+      energyLevel: (progressRes as ProgressEntry | null)?.energy_level || null,
       overallScore: Math.round(score),
     }
   }

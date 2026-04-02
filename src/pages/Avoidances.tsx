@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Ban, CheckCircle2, XCircle, TrendingUp, Calendar } from 'lucide-react'
+import { Ban, CheckCircle2, XCircle, TrendingUp } from 'lucide-react'
 import { avoidanceAPI } from '../lib/api'
 import { getToday, formatDisplayDate } from '../utils/date'
 import type { AvoidanceEntry, AvoidanceType, AvoidanceStats } from '../types'
@@ -52,7 +52,7 @@ export default function Avoidances({ userId }: AvoidancesProps) {
   const [stats, setStats] = useState<AvoidanceStats[]>([])
   const [selectedDate, setSelectedDate] = useState(getToday())
   const [loading, setLoading] = useState(true)
-  const [customAvoidances, setCustomAvoidances] = useState<string[]>([])
+  const [customAvoidances] = useState<string[]>([])
 
   const loadData = useCallback(async () => {
     try {
@@ -98,7 +98,7 @@ export default function Avoidances({ userId }: AvoidancesProps) {
   }
 
   const completedCount = entries.filter(e => e.avoided).length
-  const totalCount = AVOIDANCE_TYPES.length + customAvoidances.length
+  const totalCount = AVOIDANCE_TYPES.length + customAvoidances.length // eslint-disable-line @typescript-eslint/no-unused-vars
 
   if (loading) {
     return (
@@ -280,7 +280,7 @@ export default function Avoidances({ userId }: AvoidancesProps) {
         </div>
       </div>
 
-      {/* Custom Avoidances */}
+      {/* Custom Avoidances - Reserved for future use */}
       {customAvoidances.length > 0 && (
         <div>
           <h2 
@@ -290,7 +290,7 @@ export default function Avoidances({ userId }: AvoidancesProps) {
             Custom Avoidances
           </h2>
           <div className="space-y-2">
-            {customAvoidances.map((custom, idx) => (
+            {customAvoidances.map((custom: string, idx: number) => (
               <div
                 key={idx}
                 className="card flex items-center justify-between"

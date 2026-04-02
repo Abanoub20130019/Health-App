@@ -1,10 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
-import type { Database } from '../types/supabase'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL || ''
+const supabaseKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY || ''
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
+export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
@@ -15,7 +14,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
 // Test connection
 export async function testSupabaseConnection() {
   try {
-    const { data, error } = await supabase.from('users').select('count').single()
+    const { error } = await supabase.from('users').select('count').single()
     if (error) throw error
     console.log('✅ Supabase connection successful')
     return true

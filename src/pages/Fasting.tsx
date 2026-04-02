@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Play, Clock, Flame, TrendingUp, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { fastingAPI } from '../lib/api'
-import { formatTime, getToday } from '../utils/date'
+import { formatTime } from '../utils/date'
 import CircularProgress from '../components/CircularProgress'
 import type { FastingSession, FastingStats } from '../types'
 

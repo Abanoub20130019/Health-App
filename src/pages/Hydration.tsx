@@ -182,7 +182,7 @@ export default function Hydration({ userId }: HydrationProps) {
 
         {/* Quick Add Buttons */}
         <div className="flex justify-center gap-3 px-4">
-          {QUICK_ADD_AMOUNTS.map(({ amount, label, icon: Icon }) => (
+          {QUICK_ADD_AMOUNTS.map(({ amount, label: _label, icon: Icon }) => (
             <button
               key={amount}
               onClick={() => addWater(amount)}

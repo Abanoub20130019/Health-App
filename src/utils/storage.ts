@@ -33,7 +33,7 @@ export const storage = {
     const data = localStorage.getItem(STORAGE_KEYS.OFFLINE_QUEUE);
     return data ? JSON.parse(data) : [];
   },
-  addToOfflineQueue: (action: unknown) => {
+  addToOfflineQueue: (action: Record<string, unknown>) => {
     const queue = storage.getOfflineQueue();
     queue.push({ ...action, timestamp: new Date().toISOString() });
     localStorage.setItem(STORAGE_KEYS.OFFLINE_QUEUE, JSON.stringify(queue));

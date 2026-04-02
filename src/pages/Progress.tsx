@@ -4,16 +4,11 @@ import {
   Camera, 
   Ruler, 
   Zap,
-  Smile,
-  Frown,
-  Meh,
-  AlertCircle,
-  ChevronRight,
   Plus
 } from 'lucide-react'
 import { progressAPI } from '../lib/api'
 import { getToday, formatDisplayDate } from '../utils/date'
-import CircularProgress from '../components/CircularProgress'
+
 import type { ProgressEntry } from '../types'
 
 interface ProgressProps {
@@ -22,7 +17,7 @@ interface ProgressProps {
 
 export default function Progress({ userId }: ProgressProps) {
   const [entry, setEntry] = useState<ProgressEntry | null>(null)
-  const [history, setHistory] = useState<ProgressEntry[]>([])
+  const [, setHistory] = useState<ProgressEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
 
