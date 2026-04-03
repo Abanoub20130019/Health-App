@@ -59,6 +59,17 @@ export const authAPI = {
 // ==================== USER ====================
 export const userAPI = {
   getOrCreate: async (id: string, email: string, name: string): Promise<User> => {
+    // Skip database operations if ID starts with 'offline-' or 'local-'
+    if (id.startsWith('offline-') || id.startsWith('local-')) {
+      return {
+        id,
+        email,
+        name,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as User
+    }
+    
     // Check if user exists by ID
     const { data: existing, error: fetchError } = await supabase
       .from('users')
