@@ -51,7 +51,7 @@ export const authAPI = {
     return user
   },
   
-  onAuthStateChange: (callback: (event: string, session: any) => void) => {
+  onAuthStateChange: (callback: (event: string, session: { user?: { id: string; email?: string; user_metadata?: { name?: string } } } | null) => void) => {
     return supabase.auth.onAuthStateChange(callback)
   }
 }
@@ -513,7 +513,7 @@ export const hydrationAPI = {
       const existingData = existing as HydrationEntry
       const currentEntries = existingData.entries || []
       const newEntries = [...currentEntries, entry]
-      const newTotal = newEntries.reduce((sum: number, e: any) => sum + e.amount_ml, 0)
+      const newTotal = newEntries.reduce((sum: number, e: { amount_ml: number }) => sum + e.amount_ml, 0)
       
       const { data: result, error } = await supabase
         .from('hydration_entries')
@@ -881,21 +881,21 @@ export const dashboardAPI = {
   getDailySummary: async (userId: string, date: string) => {
     // Fetch all daily data (with safe single row fetching)
     const [fastingRes, avoidancesRes, walkingRes, exerciseRes, hydrationRes, sleepRes, mindfulRes, progressRes] = await Promise.all([
-      Promise.resolve(supabase.from('fasting_sessions').select('*').eq('user_id', userId).gte('start_time', date).lt('start_time', date + 'T23:59:59').limit(1).single()).then((r: any) => r.data).catch(() => null),
+      supabase.from('fasting_sessions').select('*').eq('user_id', userId).gte('start_time', date).lt('start_time', date + 'T23:59:59').limit(1).maybeSingle(),
       supabase.from('avoidance_entries').select('*').eq('user_id', userId).eq('date', date),
-      Promise.resolve(supabase.from('walking_entries').select('*').eq('user_id', userId).eq('date', date).single()).then((r: any) => r.data).catch(() => null),
+      supabase.from('walking_entries').select('*').eq('user_id', userId).eq('date', date).maybeSingle(),
       supabase.from('exercise_sessions').select('*').eq('user_id', userId).eq('date', date),
-      Promise.resolve(supabase.from('hydration_entries').select('*').eq('user_id', userId).eq('date', date).single()).then((r: any) => r.data).catch(() => null),
-      Promise.resolve(supabase.from('sleep_entries').select('*').eq('user_id', userId).eq('date', date).single()).then((r: any) => r.data).catch(() => null),
-      Promise.resolve(supabase.from('mindful_eating_entries').select('*').eq('user_id', userId).eq('date', date).single()).then((r: any) => r.data).catch(() => null),
-      Promise.resolve(supabase.from('progress_entries').select('*').eq('user_id', userId).eq('date', date).single()).then((r: any) => r.data).catch(() => null),
+      supabase.from('hydration_entries').select('*').eq('user_id', userId).eq('date', date).maybeSingle(),
+      supabase.from('sleep_entries').select('*').eq('user_id', userId).eq('date', date).maybeSingle(),
+      supabase.from('mindful_eating_entries').select('*').eq('user_id', userId).eq('date', date).maybeSingle(),
+      supabase.from('progress_entries').select('*').eq('user_id', userId).eq('date', date).maybeSingle(),
     ])
     
     // Calculate score
     let score = 0
     
     // Fasting (15%)
-    const fastingData = fastingRes as any
+    const fastingData = fastingRes.data
     const fastingActive = fastingData && !fastingData.end_time
     if (fastingActive || (fastingData && !fastingData.broken_early)) score += 15
     
@@ -906,7 +906,7 @@ export const dashboardAPI = {
     score += avoidancesScore
     
     // Steps (15%)
-    const walkingData = walkingRes as WalkingEntry
+    const walkingData = walkingRes.data
     const steps = walkingData?.step_count || 0
     const stepsScore = Math.min((steps / 10000) * 15, 15)
     score += stepsScore
@@ -916,19 +916,19 @@ export const dashboardAPI = {
     if (exerciseData?.length > 0) score += 10
     
     // Hydration (15%)
-    const hydrationData = hydrationRes as HydrationEntry
+    const hydrationData = hydrationRes.data
     const hydrationAmount = hydrationData?.total_ml || 0
     const hydrationScore = Math.min((hydrationAmount / 2500) * 15, 15)
     score += hydrationScore
     
     // Sleep (15%)
-    const sleepData = sleepRes as SleepEntry
+    const sleepData = sleepRes.data
     const sleepHours = sleepData?.duration_hours || 0
     const sleepScore = sleepHours >= 7 ? 15 : Math.min((sleepHours / 7) * 15, 15)
     score += sleepScore
     
     // Mindful Eating (15%)
-    const mindfulData = mindfulRes as MindfulEatingEntry
+    const mindfulData = mindfulRes.data
     const mindfulScore = mindfulData ? Math.min(
       ((mindfulData.protein_prioritized_meals || 0) / (mindfulData.meals_count || 1)) * 5 +
       Math.min((mindfulData.vegetable_servings || 0) / 5, 1) * 5 +
@@ -948,7 +948,7 @@ export const dashboardAPI = {
       hydrationPercent: Math.round((hydrationAmount / 2500) * 100),
       sleepHours,
       mindfulEatingScore: Math.round(mindfulScore),
-      energyLevel: (progressRes as ProgressEntry | null)?.energy_level || null,
+      energyLevel: progressRes.data?.energy_level || null,
       overallScore: Math.round(score),
     }
   }
