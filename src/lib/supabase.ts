@@ -42,7 +42,7 @@ export async function testSupabaseConnection(): Promise<boolean> {
   connectionPromise = (async () => {
     try {
       // Simple health check without querying tables
-      const { data, error } = await supabase.auth.getSession()
+      const { error } = await supabase.auth.getSession()
       if (error && error.message.includes('network')) {
         console.warn('⚠️ Network error connecting to Supabase')
         return false
